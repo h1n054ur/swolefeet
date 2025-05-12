@@ -180,41 +180,43 @@ def handle_search_command():
         console.print("0. Return to menu")
         if total_pages > 1:
             if current_page > 1:
-                console.print("P. Previous page")
+                console.print("P/p. Previous page")
             if current_page < total_pages:
-                console.print("N. Next page")
-        console.print("1-50. Select number to purchase")
+                console.print("N/n. Next page")
+        console.print("\nEnter a number from the list above to purchase")
         
         # Build choices list
         choices = ["0"]
         if total_pages > 1:
             if current_page > 1:
-                choices.append("P")
+                choices.extend(["P", "p"])
             if current_page < total_pages:
-                choices.append("N")
+                choices.extend(["N", "n"])
         
-        # Add number choices for current page
+        # Add number choices for current page but don't show them in prompt
         start_idx = (current_page - 1) * 50
         end_idx = min(start_idx + 50, len(results))
-        choices.extend([str(i) for i in range(start_idx + 1, end_idx + 1)])
+        valid_numbers = [str(i) for i in range(start_idx + 1, end_idx + 1)]
+        choices.extend(valid_numbers)
         
         selection = Prompt.ask(
             "Select an option",
             choices=choices,
+            show_choices=False,
             default="0"
         )
         
         if selection == "0":
             break
-        elif selection == "P" and current_page > 1:
+        elif selection.upper() == "P" and current_page > 1:
             current_page -= 1
             console.clear()
             console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
-        elif selection == "N" and current_page < total_pages:
+        elif selection.upper() == "N" and current_page < total_pages:
             current_page += 1
             console.clear()
             console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
-        else:
+        elif selection.isdigit():
             # Handle purchase
             selected_idx = int(selection) - 1
             from twilio_manager.cli.commands.purchase_command import handle_purchase_command
