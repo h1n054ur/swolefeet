@@ -1,11 +1,12 @@
+import time
+import requests
+from typing import Dict, List, Set, Tuple, Optional
 from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
 from twilio_manager.shared.config import ACCOUNT_SID, AUTH_TOKEN
+from urllib.parse import urlparse, parse_qs
 
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
-
-import time
-from typing import Dict, List, Set, Tuple, Optional
-from twilio.base.exceptions import TwilioRestException
 
 # Price mapping for different number types and countries
 PRICE_MAP = {
@@ -21,6 +22,42 @@ PRICE_MAP = {
     ("CA", "local"): 1.15,        # CA local numbers
     ("CA", "tollfree"): 2.15      # CA toll-free numbers
 }
+
+def format_phone_number_dict(number_dict: Dict, country: str, number_type: str) -> Optional[Dict]:
+    """Format a phone number dictionary from the REST API response."""
+    try:
+        # Get capabilities safely
+        caps = number_dict.get('capabilities', {})
+        if isinstance(caps, (list, tuple)):
+            caps_dict = {
+                "voice": "voice" in caps,
+                "sms": "sms" in caps,
+                "mms": "mms" in caps
+            }
+        else:
+            caps_dict = {
+                "voice": caps.get("voice", False),
+                "sms": caps.get("sms", False),
+                "mms": caps.get("mms", False)
+            }
+
+        # Get monthly price from API or use default from price map
+        try:
+            monthly_rate = float(number_dict.get('monthly_rate', 0))
+            if monthly_rate == 0:
+                monthly_rate = PRICE_MAP.get((country, number_type), 1.15)
+        except (ValueError, TypeError):
+            monthly_rate = PRICE_MAP.get((country, number_type), 1.15)
+
+        return {
+            "phoneNumber": number_dict.get('phone_number', '—'),
+            "friendlyName": number_dict.get('friendly_name', '') or number_dict.get('phone_number', '—'),
+            "region": number_dict.get('locality', '') or number_dict.get('region', '') or "—",
+            "capabilities": caps_dict,
+            "monthlyPrice": monthly_rate
+        }
+    except Exception:
+        return None
 
 def format_phone_number(number, country: str, number_type: str) -> Optional[Dict]:
     """Format a phone number object into our standard dictionary format."""
@@ -61,7 +98,7 @@ def format_phone_number(number, country: str, number_type: str) -> Optional[Dict
 def search_available_numbers_api(country: str, type: str, capabilities: List[str], contains: str = "", 
                                progress_callback=None) -> Tuple[List[Dict], str]:
     """
-    Search for available phone numbers with pagination and rate limiting.
+    Search for available phone numbers using direct HTTP requests with pagination.
     
     Args:
         country: Country code (e.g., "US")
@@ -74,39 +111,40 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         Tuple of (results list, status message)
     """
     try:
-        # Set up search parameters
-        kwargs = {
-            "limit": 100  # Maximum allowed by Twilio
-        }
-        
-        # Add capability filters
-        if capabilities:
-            if "SMS" in capabilities:
-                kwargs["sms_enabled"] = True
-            if "VOICE" in capabilities:
-                kwargs["voice_enabled"] = True
-            if "MMS" in capabilities:
-                kwargs["mms_enabled"] = True
-            
-        # Add pattern if provided
-        if contains:
-            kwargs["contains"] = contains
-            
-        # Add area code if it's a valid US area code pattern
-        if country == "US" and contains and contains.isdigit() and len(contains) == 3:
-            kwargs["area_code"] = contains
-            kwargs.pop("contains", None)
-
-        # Get the appropriate subresource based on type
+        # Map number types to API endpoints
         type_map = {
-            "local": client.available_phone_numbers(country).local,
-            "tollfree": client.available_phone_numbers(country).toll_free,
-            "mobile": client.available_phone_numbers(country).mobile
+            "local": "Local",
+            "tollfree": "TollFree",
+            "mobile": "Mobile"
         }
         
         number_type = type_map.get(type.lower())
         if not number_type:
             return [], "Invalid number type specified"
+            
+        # Base URL for Twilio API
+        base_url = f"https://api.twilio.com/2010-04-01/Accounts/{ACCOUNT_SID}/AvailablePhoneNumbers/{country}/{number_type}.json"
+        
+        # Set up initial parameters
+        params = {
+            'PageSize': 100,  # Maximum allowed per page
+        }
+        
+        # Add capability filters
+        if capabilities:
+            if "SMS" in capabilities:
+                params["SmsEnabled"] = "true"
+            if "VOICE" in capabilities:
+                params["VoiceEnabled"] = "true"
+            if "MMS" in capabilities:
+                params["MmsEnabled"] = "true"
+                
+        # Add pattern if provided
+        if contains:
+            if country == "US" and contains.isdigit() and len(contains) == 3:
+                params["AreaCode"] = contains
+            else:
+                params["Contains"] = contains
 
         # Initialize tracking variables
         results = []
@@ -114,62 +152,79 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         consecutive_empty = 0
         max_retries = 3
         retry_count = 0
+        page_token = None
         
-        while retry_count < max_retries:
+        while len(results) < 500 and consecutive_empty < 2:
             try:
-                # Query the API with page_size
-                kwargs['limit'] = 100  # Maximum allowed by Twilio
+                # Add page token if we have one
+                if page_token:
+                    params['PageToken'] = page_token
                 
-                # Get the first page of results
-                numbers = number_type.list(**kwargs)
+                # Make request with basic auth
+                response = requests.get(
+                    base_url,
+                    auth=(ACCOUNT_SID, AUTH_TOKEN),
+                    params=params,
+                    timeout=30
+                )
+                response.raise_for_status()
                 
-                # Process results
+                # Parse response
+                data = response.json()
                 new_numbers = 0
-                for n in numbers:
-                    phone_number = getattr(n, 'phone_number', None)
+                
+                # Process numbers from this page
+                for number in data.get('available_phone_numbers', []):
+                    phone_number = number.get('phone_number')
                     if not phone_number or phone_number in seen_numbers:
                         continue
-                        
-                    formatted = format_phone_number(n, country, type.lower())
+                    
+                    formatted = format_phone_number_dict(number, country, type.lower())
                     if formatted:
                         results.append(formatted)
                         seen_numbers.add(phone_number)
                         new_numbers += 1
                         
-                        # Stop if we've reached 500 numbers
                         if len(results) >= 500:
                             break
                 
-                # Update progress if callback provided
+                # Update progress
                 if progress_callback:
                     progress_callback(len(results))
                 
-                # Check if we found any new numbers
+                # Check if we found new numbers
                 if new_numbers == 0:
                     consecutive_empty += 1
                 else:
                     consecutive_empty = 0
                 
-                # Stop conditions
-                if len(results) >= 500 or consecutive_empty >= 2:
+                # Get next page token from URI
+                next_page_uri = data.get('next_page_uri')
+                if not next_page_uri:
                     break
                     
-                # Add delay for rate limiting
+                # Parse next page token from URI
+                parsed = urlparse(next_page_uri)
+                query_params = parse_qs(parsed.query)
+                page_token = query_params.get('PageToken', [None])[0]
+                
+                if not page_token:
+                    break
+                
+                # Rate limiting
                 time.sleep(1)
                 
-                break  # Break from retry loop
-                
-            except TwilioRestException as e:
-                if e.status == 429:  # Rate limit error
-                    retry_count += 1
-                    time.sleep(2 ** retry_count)  # Exponential backoff
-                else:
-                    return results, f"Twilio API error: {str(e)}"
-            except Exception as e:
+            except requests.exceptions.RequestException as e:
                 retry_count += 1
                 if retry_count >= max_retries:
                     return results, f"Error after {max_retries} retries: {str(e)}"
-                time.sleep(2 ** retry_count)
+                    
+                # Handle rate limits with exponential backoff
+                if getattr(e.response, 'status_code', None) == 429:
+                    time.sleep(2 ** retry_count)
+                else:
+                    time.sleep(1)
+                continue
         
         # Determine status message
         if len(results) >= 500:
