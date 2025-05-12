@@ -1,3 +1,4 @@
+from typing import List, Dict, Tuple, Optional, Callable
 from twilio_manager.services.phone_service import (
     search_available_numbers_api,
     purchase_number_api,
@@ -6,30 +7,40 @@ from twilio_manager.services.phone_service import (
     get_active_numbers_api
 )
 
-def search_available_numbers(country_code, number_type="local", capabilities=None, pattern=""):
+# Country code mapping
+COUNTRY_MAP = {
+    '+1': 'US',    # USA/Canada
+    '1': 'US',     # Handle without plus
+    '+44': 'GB',   # UK
+    '44': 'GB',    # Handle without plus
+    '+61': 'AU',   # Australia
+    '61': 'AU',    # Handle without plus
+    # Add more mappings as needed
+}
+
+def search_available_numbers(
+    country_code: str, 
+    number_type: str = "local", 
+    capabilities: Optional[List[str]] = None, 
+    pattern: str = "",
+    progress_callback: Optional[Callable[[int], None]] = None
+) -> Tuple[List[Dict], str]:
     """
-    Search for available phone numbers.
+    Search for available phone numbers with pagination and progress tracking.
     
     Args:
         country_code: Country code (e.g., "+1" for US/Canada)
         number_type: Type of number ("local", "tollfree", or "mobile")
         capabilities: List of required capabilities (e.g., ["VOICE", "SMS"])
         pattern: Optional pattern to search for in the number
+        progress_callback: Optional callback function to report progress
+    
+    Returns:
+        Tuple of (results list, status message)
     """
     try:
-        # Convert E.164 prefix to ISO country code
-        country_map = {
-            '+1': 'US',    # USA/Canada
-            '1': 'US',     # Handle without plus
-            '+44': 'GB',   # UK
-            '44': 'GB',    # Handle without plus
-            '+61': 'AU',   # Australia
-            '61': 'AU',    # Handle without plus
-            # Add more mappings as needed
-        }
-        
         # Get ISO country code, default to US if not found
-        country = country_map.get(country_code, 'US')
+        country = COUNTRY_MAP.get(country_code, 'US')
         
         # Default capabilities if none provided
         if capabilities is None:
@@ -53,14 +64,12 @@ def search_available_numbers(country_code, number_type="local", capabilities=Non
             country=country,
             type=number_type,
             capabilities=capabilities,
-            contains=pattern
+            contains=pattern,
+            progress_callback=progress_callback
         )
 
     except Exception as e:
-        print(f"[core] Search error: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full error: {traceback.format_exc()}")
-        return []
+        return [], f"Core layer error: {str(e)}"
 
 def purchase_number(phone_number):
     try:

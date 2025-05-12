@@ -78,10 +78,34 @@ def handle_search_command():
     if pattern:
         console.print(f"Pattern: [cyan]{pattern}[/cyan]")
 
-    # Use tqdm for a simulated loading experience
-    with tqdm(total=1, desc="🔍 Fetching numbers", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}") as pbar:
-        results = search_available_numbers(country_code, number_type, capabilities, pattern)
-        pbar.update(1)
+    # Show search criteria
+    console.print("\n[bold]Search criteria:[/bold]")
+    console.print(f"Country: [cyan]{country_code}[/cyan]")
+    console.print(f"Type: [cyan]{number_type}[/cyan]")
+    console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
+    if pattern:
+        console.print(f"Pattern: [cyan]{pattern}[/cyan]")
+
+    # Initialize progress bar
+    with tqdm(total=500, desc="🔍 Searching for numbers", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} numbers") as pbar:
+        def update_progress(count):
+            pbar.n = min(count, 500)
+            pbar.refresh()
+        
+        # Search for numbers with progress tracking
+        results, status = search_available_numbers(
+            country_code, 
+            number_type, 
+            capabilities, 
+            pattern,
+            progress_callback=update_progress
+        )
+
+    # Show search status
+    if status.startswith("Error"):
+        console.print(f"\n[red]Search error: {status}[/red]")
+        Prompt.ask("\nPress Enter to return")
+        return
 
     if not results:
         console.print("\n[red]No matching numbers found.[/red]")
@@ -97,6 +121,10 @@ def handle_search_command():
         Prompt.ask("\nPress Enter to return")
         return
 
+    # Show search summary
+    console.print(f"\n[bold green]{status}[/bold green]")
+    
+    # Create results table
     table = Table(title=f"[bold]Found {len(results)} Available Numbers[/bold]", show_lines=True)
     table.add_column("#", style="dim", justify="right")
     table.add_column("Phone Number", style="bold cyan")
@@ -105,7 +133,7 @@ def handle_search_command():
     table.add_column("Capabilities", style="magenta")
 
     for idx, number in enumerate(results, 1):
-        # Get capabilities
+        # Get capabilities with colors
         caps = []
         if number.get('capabilities', {}).get('voice'):
             caps.append("[blue]VOICE[/blue]")
@@ -114,13 +142,14 @@ def handle_search_command():
         if number.get('capabilities', {}).get('mms'):
             caps.append("[yellow]MMS[/yellow]")
 
-        # Format price
+        # Format price with currency
         price = number.get('monthlyPrice', 0)
         if isinstance(price, (int, float)):
             price_str = f"${price:.2f}"
         else:
             price_str = "—"
 
+        # Add row to table
         table.add_row(
             str(idx),
             number.get("phoneNumber", "—"),
