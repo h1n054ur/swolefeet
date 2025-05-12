@@ -112,19 +112,18 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         seen_numbers: Set[str] = set()
         consecutive_empty = 0
         max_retries = 3
-        
-        while len(results) < 500 and consecutive_empty < 2:
-            retry_count = 0
-            
-            while retry_count < max_retries:
-                try:
-                    # Query the API with page_size
-                    kwargs['page_size'] = 100  # Maximum allowed by Twilio
-                    numbers = list(number_type.list(**kwargs))
-                    
-                    # Process results
+        while retry_count < max_retries:
+            try:
+                # Query the API with page_size
+                kwargs['page_size'] = 100  # Maximum allowed by Twilio
+                
+                # Get the first page of results
+                page = number_type.list(**kwargs)
+                
+                while True:
+                    # Process current page
                     new_numbers = 0
-                    for n in numbers:
+                    for n in page:
                         phone_number = getattr(n, 'phone_number', None)
                         if not phone_number or phone_number in seen_numbers:
                             continue
@@ -144,30 +143,38 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                         progress_callback(len(results))
                     
                     # Check if we found any new numbers
-                    if new_numbers == 0 or len(numbers) < 100:
+                    if new_numbers == 0:
                         consecutive_empty += 1
                     else:
                         consecutive_empty = 0
                     
-                    # Stop if we've reached 500 numbers
-                    if len(results) >= 500:
+                    # Stop conditions
+                    if len(results) >= 500 or consecutive_empty >= 2:
+                        break
+                        
+                    # Check if there are more pages
+                    if not page.next_page_url:
                         break
                         
                     # Add delay for rate limiting
                     time.sleep(1)
-                    break
                     
-                except TwilioRestException as e:
-                    if e.status == 429:  # Rate limit error
-                        retry_count += 1
-                        time.sleep(2 ** retry_count)  # Exponential backoff
-                    else:
-                        return results, f"Twilio API error: {str(e)}"
-                except Exception as e:
+                    # Get next page
+                    page = page.next_page()
+                
+                break  # Break from retry loop
+                
+            except TwilioRestException as e:
+                if e.status == 429:  # Rate limit error
                     retry_count += 1
-                    if retry_count >= max_retries:
-                        return results, f"Error after {max_retries} retries: {str(e)}"
-                    time.sleep(2 ** retry_count)
+                    time.sleep(2 ** retry_count)  # Exponential backoff
+                else:
+                    return results, f"Twilio API error: {str(e)}"
+            except Exception as e:
+                retry_count += 1
+                if retry_count >= max_retries:
+                    return results, f"Error after {max_retries} retries: {str(e)}"
+                time.sleep(2 ** retry_count)
         
         # Determine status message
         if len(results) >= 500:
