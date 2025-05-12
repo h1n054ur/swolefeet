@@ -70,31 +70,63 @@ def handle_search_command():
 
     console.print("\n[bold yellow]Searching...[/bold yellow]")
 
+    # Show search criteria
+    console.print("\n[bold]Search criteria:[/bold]")
+    console.print(f"Country: [cyan]{country_code}[/cyan]")
+    console.print(f"Type: [cyan]{number_type}[/cyan]")
+    console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
+    if pattern:
+        console.print(f"Pattern: [cyan]{pattern}[/cyan]")
+
     # Use tqdm for a simulated loading experience
     with tqdm(total=1, desc="🔍 Fetching numbers", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}") as pbar:
         results = search_available_numbers(country_code, number_type, capabilities, pattern)
         pbar.update(1)
 
     if not results:
-        console.print("[red]No matching numbers found.[/red]")
+        console.print("\n[red]No matching numbers found.[/red]")
+        console.print("\nPossible reasons:")
+        console.print("• No numbers available in the selected region")
+        console.print("• No numbers match the selected capabilities")
+        console.print("• Pattern too restrictive")
+        console.print("• Service not available in the selected region")
+        console.print("\nTry:")
+        console.print("• Different region")
+        console.print("• Fewer capabilities")
+        console.print("• Remove pattern")
         Prompt.ask("\nPress Enter to return")
         return
 
-    table = Table(title="Available Numbers", show_lines=True)
+    table = Table(title=f"[bold]Found {len(results)} Available Numbers[/bold]", show_lines=True)
     table.add_column("#", style="dim", justify="right")
-    table.add_column("Phone Number", style="bold")
+    table.add_column("Phone Number", style="bold cyan")
     table.add_column("Region", style="green")
     table.add_column("Monthly Cost", style="yellow")
     table.add_column("Capabilities", style="magenta")
 
     for idx, number in enumerate(results, 1):
-        caps = ", ".join([cap.upper() for cap, val in number.get('capabilities', {}).items() if val])
+        # Get capabilities
+        caps = []
+        if number.get('capabilities', {}).get('voice'):
+            caps.append("[blue]VOICE[/blue]")
+        if number.get('capabilities', {}).get('sms'):
+            caps.append("[green]SMS[/green]")
+        if number.get('capabilities', {}).get('mms'):
+            caps.append("[yellow]MMS[/yellow]")
+
+        # Format price
+        price = number.get('monthlyPrice', 0)
+        if isinstance(price, (int, float)):
+            price_str = f"${price:.2f}"
+        else:
+            price_str = "—"
+
         table.add_row(
             str(idx),
             number.get("phoneNumber", "—"),
             number.get("region", "—"),
-            f"${number.get('monthlyPrice', '—')}",
-            caps or "—"
+            price_str,
+            " + ".join(caps) or "—"
         )
 
     console.print("\n")
