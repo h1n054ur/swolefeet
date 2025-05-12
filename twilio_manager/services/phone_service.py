@@ -69,13 +69,17 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
 
                 # Get price based on number type and country
                 price_map = {
-                    ("US", "local"): 1.00,      # US local numbers
-                    ("US", "tollfree"): 2.00,   # US toll-free numbers
-                    ("US", "mobile"): 1.00,     # US mobile numbers
-                    ("GB", "local"): 1.50,      # UK local numbers
-                    ("GB", "mobile"): 1.50,     # UK mobile numbers
-                    ("AU", "local"): 1.50,      # AU local numbers
-                    ("AU", "mobile"): 1.50      # AU mobile numbers
+                    ("US", "local"): 1.15,        # US local numbers
+                    ("US", "tollfree"): 2.15,     # US toll-free numbers
+                    ("US", "mobile"): 1.15,       # US mobile numbers
+                    ("GB", "local"): 1.15,        # UK local numbers
+                    ("GB", "mobile"): 1.15,       # UK mobile numbers
+                    ("GB", "tollfree"): 2.15,     # UK toll-free numbers
+                    ("AU", "local"): 3.00,        # AU local numbers
+                    ("AU", "mobile"): 6.50,       # AU mobile numbers
+                    ("AU", "tollfree"): 16.00,    # AU toll-free numbers
+                    ("CA", "local"): 1.15,        # CA local numbers
+                    ("CA", "tollfree"): 2.15      # CA toll-free numbers
                 }
                 
                 # Get monthly price from API or use default from price map
@@ -83,10 +87,10 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
                     monthly_rate = float(getattr(n, 'monthly_rate', None) or 0)
                     if monthly_rate == 0:
                         # If API returns 0, use our price map
-                        monthly_rate = price_map.get((country, type.lower()), 1.00)
+                        monthly_rate = price_map.get((country, type.lower()), 1.15)  # Default to most common price
                 except (ValueError, TypeError):
                     # If there's any error, use our price map
-                    monthly_rate = price_map.get((country, type.lower()), 1.00)
+                    monthly_rate = price_map.get((country, type.lower()), 1.15)  # Default to most common price
 
                 # Build result dict
                 results.append({
