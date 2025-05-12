@@ -14,12 +14,6 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         contains: Optional pattern to search for in the number
     """
     try:
-        print(f"[DEBUG] Searching for numbers with params:")
-        print(f"  Country: {country}")
-        print(f"  Type: {type}")
-        print(f"  Capabilities: {capabilities}")
-        print(f"  Pattern: {contains}")
-
         # Set up search parameters
         kwargs = {}
         
@@ -38,10 +32,7 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         # Add area code if it's a valid US area code pattern
         if country == "US" and contains and contains.isdigit() and len(contains) == 3:
             kwargs["area_code"] = contains
-            # Remove contains to avoid conflict
-            kwargs.pop("contains", None)
-
-        print(f"[DEBUG] Search parameters: {kwargs}")
+            kwargs.pop("contains", None)  # Remove contains to avoid conflict
 
         # Get the appropriate subresource based on type
         type_map = {
@@ -52,17 +43,10 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         
         number_type = type_map.get(type.lower())
         if not number_type:
-            print(f"[DEBUG] Invalid number type: {type}")
             return []
 
-        print(f"[DEBUG] Using number type: {type.lower()}")
-
-        # Fetch numbers with limit to ensure we get some results
-        numbers = number_type.list(limit=20, **kwargs)
-        
-        # Convert to list to check length
-        numbers = list(numbers)
-        print(f"[DEBUG] Found {len(numbers)} numbers")
+        # Fetch numbers with limit
+        numbers = list(number_type.list(limit=20, **kwargs))
 
         # Format results
         results = []
@@ -71,47 +55,55 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
                 # Get capabilities safely
                 caps = getattr(n, 'capabilities', {})
                 if isinstance(caps, (list, tuple)):
-                    # Handle case where capabilities might be a list
                     caps_dict = {
                         "voice": "voice" in caps,
                         "sms": "sms" in caps,
                         "mms": "mms" in caps
                     }
                 else:
-                    # Handle case where capabilities is a dict
                     caps_dict = {
                         "voice": caps.get("voice", False),
                         "sms": caps.get("sms", False),
                         "mms": caps.get("mms", False)
                     }
 
-                # Build result dict with safe attribute access
-                result = {
+                # Get price based on number type and country
+                price_map = {
+                    ("US", "local"): 1.00,      # US local numbers
+                    ("US", "tollfree"): 2.00,   # US toll-free numbers
+                    ("US", "mobile"): 1.00,     # US mobile numbers
+                    ("GB", "local"): 1.50,      # UK local numbers
+                    ("GB", "mobile"): 1.50,     # UK mobile numbers
+                    ("AU", "local"): 1.50,      # AU local numbers
+                    ("AU", "mobile"): 1.50      # AU mobile numbers
+                }
+                
+                # Get monthly price from API or use default from price map
+                try:
+                    monthly_rate = float(getattr(n, 'monthly_rate', None) or 0)
+                    if monthly_rate == 0:
+                        # If API returns 0, use our price map
+                        monthly_rate = price_map.get((country, type.lower()), 1.00)
+                except (ValueError, TypeError):
+                    # If there's any error, use our price map
+                    monthly_rate = price_map.get((country, type.lower()), 1.00)
+
+                # Build result dict
+                results.append({
                     "phoneNumber": getattr(n, 'phone_number', '—'),
                     "friendlyName": getattr(n, 'friendly_name', '') or getattr(n, 'phone_number', '—'),
                     "region": getattr(n, 'locality', '') or getattr(n, 'region', '') or "—",
-                    "capabilities": caps_dict
-                }
-
-                # Handle monthly rate
-                try:
-                    result["monthlyPrice"] = float(getattr(n, 'monthly_rate', 0) or 0)
-                except (ValueError, TypeError):
-                    result["monthlyPrice"] = 0.0
-
-                results.append(result)
+                    "capabilities": caps_dict,
+                    "monthlyPrice": monthly_rate
+                })
                 
-            except Exception as e:
-                print(f"[DEBUG] Error formatting number {n}: {str(e)}")
+            except Exception:
                 continue
-        
-        print(f"[DEBUG] Formatted {len(results)} results")
+
         return results
 
     except Exception as e:
         print(f"[service] Search error: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full error: {traceback.format_exc()}")
         return []
 
 

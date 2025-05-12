@@ -17,12 +17,6 @@ def search_available_numbers(country_code, number_type="local", capabilities=Non
         pattern: Optional pattern to search for in the number
     """
     try:
-        print(f"[DEBUG] Core layer received:")
-        print(f"  Country code: {country_code}")
-        print(f"  Number type: {number_type}")
-        print(f"  Capabilities: {capabilities}")
-        print(f"  Pattern: {pattern}")
-
         # Convert E.164 prefix to ISO country code
         country_map = {
             '+1': 'US',    # USA/Canada
@@ -36,7 +30,6 @@ def search_available_numbers(country_code, number_type="local", capabilities=Non
         
         # Get ISO country code, default to US if not found
         country = country_map.get(country_code, 'US')
-        print(f"[DEBUG] Mapped country code {country_code} to {country}")
         
         # Default capabilities if none provided
         if capabilities is None:
@@ -46,27 +39,22 @@ def search_available_numbers(country_code, number_type="local", capabilities=Non
             
         # Convert capabilities to uppercase and deduplicate
         capabilities = list(set(cap.upper() for cap in capabilities))
-        print(f"[DEBUG] Normalized capabilities: {capabilities}")
         
         # Normalize number type
         number_type = str(number_type).lower().strip()
         if number_type not in ["local", "tollfree", "mobile"]:
-            print(f"[DEBUG] Invalid number type {number_type}, defaulting to local")
             number_type = "local"
             
         # Clean up pattern
         pattern = str(pattern).strip() if pattern else ""
         
         # Call API with normalized parameters
-        results = search_available_numbers_api(
+        return search_available_numbers_api(
             country=country,
             type=number_type,
             capabilities=capabilities,
             contains=pattern
         )
-        
-        print(f"[DEBUG] Core layer received {len(results)} results")
-        return results
 
     except Exception as e:
         print(f"[core] Search error: {str(e)}")
