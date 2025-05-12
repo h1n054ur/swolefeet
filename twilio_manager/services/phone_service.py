@@ -4,29 +4,53 @@ from twilio_manager.shared.config import ACCOUNT_SID, AUTH_TOKEN
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
 def search_available_numbers_api(country, type, capabilities, contains=""):
-    numbers = client.available_phone_numbers(country).fetch(type=type)
-    kwargs = {
-        "sms_enabled": "SMS" in capabilities,
-        "voice_enabled": "VOICE" in capabilities,
-        "mms_enabled": "MMS" in capabilities
-    }
-    if contains:
-        kwargs["contains"] = contains
+    """
+    Search for available phone numbers.
+    
+    Args:
+        country: Country code (e.g., "US")
+        type: Type of number ("local", "tollfree", or "mobile")
+        capabilities: List of required capabilities (e.g., ["SMS", "VOICE"])
+        contains: Optional pattern to search for in the number
+    """
+    try:
+        # Set up search parameters
+        kwargs = {
+            "sms_enabled": "SMS" in capabilities,
+            "voice_enabled": "VOICE" in capabilities,
+            "mms_enabled": "MMS" in capabilities
+        }
+        if contains:
+            kwargs["contains"] = contains
 
-    numbers = client.available_phone_numbers(country).local.list(**kwargs) \
-        if type == "local" else \
-        client.available_phone_numbers(country).toll_free.list(**kwargs) \
-        if type == "tollfree" else \
-        client.available_phone_numbers(country).mobile.list(**kwargs)
+        # Get the appropriate subresource based on type
+        number_type = {
+            "local": lambda: client.available_phone_numbers(country).local,
+            "tollfree": lambda: client.available_phone_numbers(country).toll_free,
+            "mobile": lambda: client.available_phone_numbers(country).mobile
+        }.get(type.lower(), lambda: client.available_phone_numbers(country).local)()
 
-    return [
-        {
-            "sid": n.sid,
-            "phone_number": n.phone_number,
-            "region": n.friendly_name or n.locality or "—",
-            "capabilities": n.capabilities
-        } for n in numbers
-    ]
+        # Fetch numbers
+        numbers = number_type.list(**kwargs)
+
+        # Format results
+        return [
+            {
+                "sid": n.sid,
+                "phoneNumber": n.phone_number,
+                "friendlyName": n.friendly_name or n.phone_number,
+                "region": n.locality or n.region or "—",
+                "capabilities": {
+                    "voice": n.capabilities.get("voice", False),
+                    "sms": n.capabilities.get("sms", False),
+                    "mms": n.capabilities.get("mms", False)
+                },
+                "monthlyPrice": n.monthly_rate or 0
+            } for n in numbers
+        ]
+    except Exception as e:
+        print(f"[service] Search error: {e}")
+        return []
 
 
 def purchase_number_api(phone_number):
