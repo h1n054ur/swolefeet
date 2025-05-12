@@ -127,7 +127,8 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         
         # Set up initial parameters
         params = {
-            'PageSize': 100,  # Maximum allowed per page
+            'PageSize': 30,  # Twilio's default page size
+            'Page': 0  # Start at page 0
         }
         
         # Add capability filters
@@ -138,6 +139,8 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 params["VoiceEnabled"] = "true"
             if "MMS" in capabilities:
                 params["MmsEnabled"] = "true"
+                
+        print(f"Initial search parameters: {params}")
                 
         # Add pattern if provided
         if contains:
@@ -155,7 +158,7 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         page_token = None
         page = 1
         
-        while len(results) < 500 and consecutive_no_unique < 2:
+        while len(results) < 500 and consecutive_no_unique < 3:  # Allow more attempts before giving up
             try:
                 # Add page token if we have one
                 if page_token:
@@ -212,16 +215,23 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 
                 # Get next page token from URI
                 next_page_uri = data.get('next_page_uri')
-                if not next_page_uri:
-                    break
-                    
-                # Parse next page token from URI
-                parsed = urlparse(next_page_uri)
-                query_params = parse_qs(parsed.query)
-                page_token = query_params.get('PageToken', [None])[0]
+                print(f"Next page URI: {next_page_uri}")
                 
-                if not page_token:
-                    break
+                if next_page_uri:
+                    # Parse next page token from URI
+                    parsed = urlparse(next_page_uri)
+                    query_params = parse_qs(parsed.query)
+                    page_token = query_params.get('PageToken', [None])[0]
+                    print(f"Next page token: {page_token}")
+                    
+                    if not page_token:
+                        print("No page token found in next_page_uri")
+                        break
+                else:
+                    print("No next_page_uri found in response")
+                    # Instead of breaking, let's try to continue with an offset
+                    page_token = None
+                    params['Page'] = page
                 
                 # Rate limiting
                 time.sleep(1)
