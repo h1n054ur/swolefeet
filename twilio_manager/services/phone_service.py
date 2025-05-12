@@ -80,12 +80,13 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         }
         
         # Add capability filters
-        if "SMS" in capabilities:
-            kwargs["sms_enabled"] = True
-        if "VOICE" in capabilities:
-            kwargs["voice_enabled"] = True
-        if "MMS" in capabilities:
-            kwargs["mms_enabled"] = True
+        if capabilities:
+            if "SMS" in capabilities:
+                kwargs["sms_enabled"] = True
+            if "VOICE" in capabilities:
+                kwargs["voice_enabled"] = True
+            if "MMS" in capabilities:
+                kwargs["mms_enabled"] = True
             
         # Add pattern if provided
         if contains:
@@ -112,55 +113,49 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         seen_numbers: Set[str] = set()
         consecutive_empty = 0
         max_retries = 3
+        retry_count = 0
+        
         while retry_count < max_retries:
             try:
                 # Query the API with page_size
-                kwargs['page_size'] = 100  # Maximum allowed by Twilio
+                kwargs['limit'] = 100  # Maximum allowed by Twilio
                 
                 # Get the first page of results
-                page = number_type.list(**kwargs)
+                numbers = number_type.list(**kwargs)
                 
-                while True:
-                    # Process current page
-                    new_numbers = 0
-                    for n in page:
-                        phone_number = getattr(n, 'phone_number', None)
-                        if not phone_number or phone_number in seen_numbers:
-                            continue
-                            
-                        formatted = format_phone_number(n, country, type.lower())
-                        if formatted:
-                            results.append(formatted)
-                            seen_numbers.add(phone_number)
-                            new_numbers += 1
-                            
-                            # Stop if we've reached 500 numbers
-                            if len(results) >= 500:
-                                break
-                    
-                    # Update progress if callback provided
-                    if progress_callback:
-                        progress_callback(len(results))
-                    
-                    # Check if we found any new numbers
-                    if new_numbers == 0:
-                        consecutive_empty += 1
-                    else:
-                        consecutive_empty = 0
-                    
-                    # Stop conditions
-                    if len(results) >= 500 or consecutive_empty >= 2:
-                        break
+                # Process results
+                new_numbers = 0
+                for n in numbers:
+                    phone_number = getattr(n, 'phone_number', None)
+                    if not phone_number or phone_number in seen_numbers:
+                        continue
                         
-                    # Check if there are more pages
-                    if not page.next_page_url:
-                        break
+                    formatted = format_phone_number(n, country, type.lower())
+                    if formatted:
+                        results.append(formatted)
+                        seen_numbers.add(phone_number)
+                        new_numbers += 1
                         
-                    # Add delay for rate limiting
-                    time.sleep(1)
+                        # Stop if we've reached 500 numbers
+                        if len(results) >= 500:
+                            break
+                
+                # Update progress if callback provided
+                if progress_callback:
+                    progress_callback(len(results))
+                
+                # Check if we found any new numbers
+                if new_numbers == 0:
+                    consecutive_empty += 1
+                else:
+                    consecutive_empty = 0
+                
+                # Stop conditions
+                if len(results) >= 500 or consecutive_empty >= 2:
+                    break
                     
-                    # Get next page
-                    page = page.next_page()
+                # Add delay for rate limiting
+                time.sleep(1)
                 
                 break  # Break from retry loop
                 
