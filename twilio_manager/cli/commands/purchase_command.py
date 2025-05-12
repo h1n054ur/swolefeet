@@ -23,11 +23,35 @@ def display_number_options(numbers):
     
     console.print(table)
 
-def handle_purchase_command():
+def handle_purchase_command(pre_selected_number=None):
+    """
+    Handle the purchase of a phone number.
+    
+    Args:
+        pre_selected_number: Optional phone number to purchase directly
+    """
     console.clear()
     console.print(Panel.fit("[bold cyan]🛒 Purchase a Phone Number[/bold cyan]"))
 
-    # First, search for available numbers
+    if pre_selected_number:
+        # If number is pre-selected (e.g., from search), confirm and purchase
+        confirm = Confirm.ask(f"Are you sure you want to purchase [bold green]{pre_selected_number}[/bold green]?")
+        
+        if not confirm:
+            console.print("[yellow]Purchase cancelled.[/yellow]")
+            return
+
+        success = purchase_number(pre_selected_number)
+
+        if success:
+            console.print(f"[green]✅ Number {pre_selected_number} purchased successfully![/green]")
+        else:
+            console.print(f"[red]❌ Failed to purchase number {pre_selected_number}.[/red]")
+
+        Prompt.ask("\nPress Enter to return")
+        return
+
+    # If no pre-selected number, show search interface
     console.print("\n[bold]Search for available numbers:[/bold]")
     console.print("1. US/Canada (+1)")
     console.print("2. UK (+44)")

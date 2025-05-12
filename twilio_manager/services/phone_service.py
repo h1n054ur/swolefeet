@@ -51,3 +51,22 @@ def release_number_api(sid_or_number):
         if sid_or_number in (num.sid, num.phone_number):
             return client.incoming_phone_numbers(num.sid).delete()
     return False
+
+
+def get_active_numbers_api():
+    """Fetch all active phone numbers from the Twilio account."""
+    numbers = client.incoming_phone_numbers.list()
+    return [
+        {
+            "sid": n.sid,
+            "phoneNumber": n.phone_number,
+            "friendlyName": n.friendly_name or n.phone_number,
+            "capabilities": {
+                "voice": n.capabilities.get("voice", False),
+                "sms": n.capabilities.get("sms", False),
+                "mms": n.capabilities.get("mms", False)
+            },
+            "voiceUrl": n.voice_url,
+            "smsUrl": n.sms_url
+        } for n in numbers
+    ]

@@ -30,3 +30,37 @@ def fetch_message_logs_api(limit=20):
     except Exception as e:
         print(f"[service] Failed to fetch message logs: {e}")
         return []
+
+
+def get_recent_contacts_api(limit=10):
+    """Get a list of unique recent contacts from message history."""
+    try:
+        messages = client.messages.list(limit=100)  # Get more messages to find unique contacts
+        contacts = {}
+        
+        for msg in messages:
+            # If this is an outgoing message, add the recipient
+            if msg.direction == 'outbound-api':
+                if msg.to not in contacts:
+                    contacts[msg.to] = {
+                        'phoneNumber': msg.to,
+                        'lastContact': str(msg.date_sent),
+                        'lastDirection': 'outbound'
+                    }
+            # If this is an incoming message, add the sender
+            else:
+                if msg.from_ not in contacts:
+                    contacts[msg.from_] = {
+                        'phoneNumber': msg.from_,
+                        'lastContact': str(msg.date_sent),
+                        'lastDirection': 'inbound'
+                    }
+            
+            # Break if we have enough unique contacts
+            if len(contacts) >= limit:
+                break
+        
+        return list(contacts.values())[:limit]
+    except Exception as e:
+        print(f"[service] Failed to get recent contacts: {e}")
+        return []
