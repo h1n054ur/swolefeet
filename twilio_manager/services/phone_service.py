@@ -149,16 +149,20 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         # Initialize tracking variables
         results = []
         seen_numbers: Set[str] = set()
-        consecutive_empty = 0
+        consecutive_no_unique = 0
         max_retries = 3
         retry_count = 0
         page_token = None
+        page = 1
         
-        while len(results) < 500 and consecutive_empty < 2:
+        while len(results) < 500 and consecutive_no_unique < 2:
             try:
                 # Add page token if we have one
                 if page_token:
                     params['PageToken'] = page_token
+                
+                # Debug logging
+                print(f"\nQuerying page {page}...")
                 
                 # Make request with basic auth
                 response = requests.get(
@@ -171,10 +175,13 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 
                 # Parse response
                 data = response.json()
-                new_numbers = 0
+                new_unique = 0
                 
                 # Process numbers from this page
-                for number in data.get('available_phone_numbers', []):
+                page_numbers = data.get('available_phone_numbers', [])
+                print(f"Found {len(page_numbers)} numbers in response")
+                
+                for number in page_numbers:
                     phone_number = number.get('phone_number')
                     if not phone_number or phone_number in seen_numbers:
                         continue
@@ -183,7 +190,7 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                     if formatted:
                         results.append(formatted)
                         seen_numbers.add(phone_number)
-                        new_numbers += 1
+                        new_unique += 1
                         
                         if len(results) >= 500:
                             break
@@ -192,11 +199,16 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 if progress_callback:
                     progress_callback(len(results))
                 
-                # Check if we found new numbers
-                if new_numbers == 0:
-                    consecutive_empty += 1
+                print(f"Added {new_unique} unique numbers")
+                
+                # Check if we found new unique numbers
+                if new_unique == 0:
+                    consecutive_no_unique += 1
+                    print(f"No new unique numbers found. Attempt {consecutive_no_unique}/2")
                 else:
-                    consecutive_empty = 0
+                    consecutive_no_unique = 0
+                    
+                page += 1
                 
                 # Get next page token from URI
                 next_page_uri = data.get('next_page_uri')
