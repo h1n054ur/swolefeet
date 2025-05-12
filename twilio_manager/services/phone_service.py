@@ -65,20 +65,45 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         print(f"[DEBUG] Found {len(numbers)} numbers")
 
         # Format results
-        results = [
-            {
-                "sid": n.sid,
-                "phoneNumber": n.phone_number,
-                "friendlyName": n.friendly_name or n.phone_number,
-                "region": n.locality or n.region or "—",
-                "capabilities": {
-                    "voice": n.capabilities.get("voice", False),
-                    "sms": n.capabilities.get("sms", False),
-                    "mms": n.capabilities.get("mms", False)
-                },
-                "monthlyPrice": float(n.monthly_rate or 0)
-            } for n in numbers
-        ]
+        results = []
+        for n in numbers:
+            try:
+                # Get capabilities safely
+                caps = getattr(n, 'capabilities', {})
+                if isinstance(caps, (list, tuple)):
+                    # Handle case where capabilities might be a list
+                    caps_dict = {
+                        "voice": "voice" in caps,
+                        "sms": "sms" in caps,
+                        "mms": "mms" in caps
+                    }
+                else:
+                    # Handle case where capabilities is a dict
+                    caps_dict = {
+                        "voice": caps.get("voice", False),
+                        "sms": caps.get("sms", False),
+                        "mms": caps.get("mms", False)
+                    }
+
+                # Build result dict with safe attribute access
+                result = {
+                    "phoneNumber": getattr(n, 'phone_number', '—'),
+                    "friendlyName": getattr(n, 'friendly_name', '') or getattr(n, 'phone_number', '—'),
+                    "region": getattr(n, 'locality', '') or getattr(n, 'region', '') or "—",
+                    "capabilities": caps_dict
+                }
+
+                # Handle monthly rate
+                try:
+                    result["monthlyPrice"] = float(getattr(n, 'monthly_rate', 0) or 0)
+                except (ValueError, TypeError):
+                    result["monthlyPrice"] = 0.0
+
+                results.append(result)
+                
+            except Exception as e:
+                print(f"[DEBUG] Error formatting number {n}: {str(e)}")
+                continue
         
         print(f"[DEBUG] Formatted {len(results)} results")
         return results
