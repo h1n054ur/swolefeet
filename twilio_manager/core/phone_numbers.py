@@ -11,27 +11,34 @@ def search_available_numbers(country_code, number_type="local", capabilities=Non
     Search for available phone numbers.
     
     Args:
-        country_code: Country code (e.g., "US" for United States)
+        country_code: Country code (e.g., "+1" for US/Canada)
         number_type: Type of number ("local", "tollfree", or "mobile")
-        capabilities: List of required capabilities (e.g., ["voice", "sms"])
+        capabilities: List of required capabilities (e.g., ["VOICE", "SMS"])
         pattern: Optional pattern to search for in the number
     """
     try:
-        # Strip the '+' from country code if present
-        country = country_code.lstrip('+')
-        if len(country) > 2:  # Convert E.164 prefix to country code
-            country_map = {
-                '1': 'US',    # USA/Canada
-                '44': 'GB',   # UK
-                '61': 'AU',   # Australia
-                # Add more mappings as needed
-            }
-            prefix = country[:1] if country.startswith('1') else country[:2]
-            country = country_map.get(prefix, country)
+        # Convert E.164 prefix to ISO country code
+        country_map = {
+            '+1': 'US',    # USA/Canada
+            '+44': 'GB',   # UK
+            '+61': 'AU',   # Australia
+            # Add more mappings as needed
+        }
+        
+        # Get ISO country code, default to US if not found
+        country = country_map.get(country_code, 'US')
         
         # Default capabilities if none provided
         if capabilities is None:
             capabilities = ["SMS", "VOICE"]
+        
+        # Convert capabilities to uppercase
+        capabilities = [cap.upper() for cap in capabilities]
+        
+        # Normalize number type
+        number_type = number_type.lower()
+        if number_type not in ["local", "tollfree", "mobile"]:
+            number_type = "local"
         
         return search_available_numbers_api(
             country=country,
