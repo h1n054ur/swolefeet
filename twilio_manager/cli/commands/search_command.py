@@ -124,58 +124,99 @@ def handle_search_command():
     # Show search summary
     console.print(f"\n[bold green]{status}[/bold green]")
     
-    # Create results table
-    table = Table(title=f"[bold]Found {len(results)} Available Numbers[/bold]", show_lines=True)
-    table.add_column("#", style="dim", justify="right")
-    table.add_column("Phone Number", style="bold cyan")
-    table.add_column("Region", style="green")
-    table.add_column("Monthly Cost", style="yellow")
-    table.add_column("Capabilities", style="magenta")
-
-    for idx, number in enumerate(results, 1):
-        # Get capabilities with colors
-        caps = []
-        if number.get('capabilities', {}).get('voice'):
-            caps.append("[blue]VOICE[/blue]")
-        if number.get('capabilities', {}).get('sms'):
-            caps.append("[green]SMS[/green]")
-        if number.get('capabilities', {}).get('mms'):
-            caps.append("[yellow]MMS[/yellow]")
-
-        # Format price with currency
-        price = number.get('monthlyPrice', 0)
-        if isinstance(price, (int, float)):
-            price_str = f"${price:.2f}"
-        else:
-            price_str = "—"
-
-        # Add row to table
-        table.add_row(
-            str(idx),
-            number.get("phoneNumber", "—"),
-            number.get("region", "—"),
-            price_str,
-            " + ".join(caps) or "—"
+    def display_results_page(page_num: int) -> int:
+        start_idx = (page_num - 1) * 50
+        end_idx = min(start_idx + 50, len(results))
+        total_pages = (len(results) + 49) // 50  # Round up division
+        
+        table = Table(
+            title=f"[bold]Found {len(results)} Available Numbers (Page {page_num}/{total_pages})[/bold]",
+            show_lines=True
         )
-
-    console.print("\n")
-    console.print(table)
+        table.add_column("#", style="dim", justify="right")
+        table.add_column("Phone Number", style="bold cyan")
+        table.add_column("Region", style="green")
+        table.add_column("Monthly Cost", style="yellow")
+        table.add_column("Capabilities", style="magenta")
+        
+        for idx, number in enumerate(results[start_idx:end_idx], start_idx + 1):
+            # Get capabilities with colors
+            caps = []
+            if number.get('capabilities', {}).get('voice'):
+                caps.append("[blue]VOICE[/blue]")
+            if number.get('capabilities', {}).get('sms'):
+                caps.append("[green]SMS[/green]")
+            if number.get('capabilities', {}).get('mms'):
+                caps.append("[yellow]MMS[/yellow]")
+            
+            # Format price with currency
+            price = number.get('monthlyPrice', 0)
+            if isinstance(price, (int, float)):
+                price_str = f"${price:.2f}"
+            else:
+                price_str = "—"
+            
+            # Add row to table
+            table.add_row(
+                str(idx),
+                number.get("phoneNumber", "—"),
+                number.get("region", "—"),
+                price_str,
+                " + ".join(caps) or "—"
+            )
+        
+        console.print("\n")
+        console.print(table)
+        
+        return total_pages
     
-    # Option to purchase
-    console.print("\n[bold]Would you like to purchase one of these numbers?[/bold]")
-    console.print("0. No, return to menu")
-    console.print("1-N. Select number to purchase")
-    
-    max_index = len(results)
-    selection = Prompt.ask(
-        "Select an option",
-        choices=[str(i) for i in range(max_index + 1)],
-        default="0"
-    )
-    
-    if selection != "0":
-        from twilio_manager.cli.commands.purchase_command import handle_purchase_command
-        selected_number = results[int(selection) - 1]
-        handle_purchase_command(selected_number['phoneNumber'])
-    else:
-        Prompt.ask("\nPress Enter to return")
+    # Handle pagination and purchase options
+    current_page = 1
+    while True:
+        total_pages = display_results_page(current_page)
+        
+        # Show navigation and purchase options
+        console.print("\n[bold]Options:[/bold]")
+        console.print("0. Return to menu")
+        if total_pages > 1:
+            if current_page > 1:
+                console.print("P. Previous page")
+            if current_page < total_pages:
+                console.print("N. Next page")
+        console.print("1-50. Select number to purchase")
+        
+        # Build choices list
+        choices = ["0"]
+        if total_pages > 1:
+            if current_page > 1:
+                choices.append("P")
+            if current_page < total_pages:
+                choices.append("N")
+        
+        # Add number choices for current page
+        start_idx = (current_page - 1) * 50
+        end_idx = min(start_idx + 50, len(results))
+        choices.extend([str(i) for i in range(start_idx + 1, end_idx + 1)])
+        
+        selection = Prompt.ask(
+            "Select an option",
+            choices=choices,
+            default="0"
+        )
+        
+        if selection == "0":
+            break
+        elif selection == "P" and current_page > 1:
+            current_page -= 1
+            console.clear()
+            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
+        elif selection == "N" and current_page < total_pages:
+            current_page += 1
+            console.clear()
+            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
+        else:
+            # Handle purchase
+            selected_idx = int(selection) - 1
+            from twilio_manager.cli.commands.purchase_command import handle_purchase_command
+            handle_purchase_command(results[selected_idx]['phoneNumber'])
+            break
