@@ -125,13 +125,8 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         # Base URL for Twilio API
         base_url = f"https://api.twilio.com/2010-04-01/Accounts/{ACCOUNT_SID}/AvailablePhoneNumbers/{country}/{number_type}.json"
         
-        # Set up initial parameters
-        params = {
-            'PageSize': 30,  # Twilio's default page size
-            'Page': 0  # Start at page 0
-        }
-        
-        # Add capability filters
+        # Set up initial parameters with capability filters
+        params = {}
         if capabilities:
             if "SMS" in capabilities:
                 params["SmsEnabled"] = "true"
@@ -139,8 +134,6 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 params["VoiceEnabled"] = "true"
             if "MMS" in capabilities:
                 params["MmsEnabled"] = "true"
-                
-        print(f"Initial search parameters: {params}")
                 
         # Add pattern if provided
         if contains:
@@ -155,18 +148,11 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         consecutive_no_unique = 0
         max_retries = 3
         retry_count = 0
-        page_token = None
-        page = 1
         
-        while len(results) < 500 and consecutive_no_unique < 3:  # Allow more attempts before giving up
+        print("\nStarting search for numbers...")
+        
+        while len(results) < 500 and consecutive_no_unique < 2:
             try:
-                # Add page token if we have one
-                if page_token:
-                    params['PageToken'] = page_token
-                
-                # Debug logging
-                print(f"\nQuerying page {page}...")
-                
                 # Make request with basic auth
                 response = requests.get(
                     base_url,
@@ -180,11 +166,11 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 data = response.json()
                 new_unique = 0
                 
-                # Process numbers from this page
-                page_numbers = data.get('available_phone_numbers', [])
-                print(f"Found {len(page_numbers)} numbers in response")
+                # Process numbers from response
+                numbers = data.get('available_phone_numbers', [])
+                print(f"Found {len(numbers)} numbers in response")
                 
-                for number in page_numbers:
+                for number in numbers:
                     phone_number = number.get('phone_number')
                     if not phone_number or phone_number in seen_numbers:
                         continue
@@ -202,7 +188,7 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                 if progress_callback:
                     progress_callback(len(results))
                 
-                print(f"Added {new_unique} unique numbers")
+                print(f"Added {new_unique} unique numbers (Total: {len(results)})")
                 
                 # Check if we found new unique numbers
                 if new_unique == 0:
@@ -210,28 +196,6 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                     print(f"No new unique numbers found. Attempt {consecutive_no_unique}/2")
                 else:
                     consecutive_no_unique = 0
-                    
-                page += 1
-                
-                # Get next page token from URI
-                next_page_uri = data.get('next_page_uri')
-                print(f"Next page URI: {next_page_uri}")
-                
-                if next_page_uri:
-                    # Parse next page token from URI
-                    parsed = urlparse(next_page_uri)
-                    query_params = parse_qs(parsed.query)
-                    page_token = query_params.get('PageToken', [None])[0]
-                    print(f"Next page token: {page_token}")
-                    
-                    if not page_token:
-                        print("No page token found in next_page_uri")
-                        break
-                else:
-                    print("No next_page_uri found in response")
-                    # Instead of breaking, let's try to continue with an offset
-                    page_token = None
-                    params['Page'] = page
                 
                 # Rate limiting
                 time.sleep(1)
