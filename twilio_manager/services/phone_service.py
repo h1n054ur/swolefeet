@@ -111,17 +111,16 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
         results = []
         seen_numbers: Set[str] = set()
         consecutive_empty = 0
-        page = 0
         max_retries = 3
         
         while len(results) < 500 and consecutive_empty < 2:
-            page += 1
             retry_count = 0
             
             while retry_count < max_retries:
                 try:
-                    # Query the API
-                    numbers = list(number_type.list(page=page, **kwargs))
+                    # Query the API with page_size
+                    kwargs['page_size'] = 100  # Maximum allowed by Twilio
+                    numbers = list(number_type.list(**kwargs))
                     
                     # Process results
                     new_numbers = 0
@@ -135,17 +134,25 @@ def search_available_numbers_api(country: str, type: str, capabilities: List[str
                             results.append(formatted)
                             seen_numbers.add(phone_number)
                             new_numbers += 1
+                            
+                            # Stop if we've reached 500 numbers
+                            if len(results) >= 500:
+                                break
                     
                     # Update progress if callback provided
                     if progress_callback:
                         progress_callback(len(results))
                     
                     # Check if we found any new numbers
-                    if new_numbers == 0:
+                    if new_numbers == 0 or len(numbers) < 100:
                         consecutive_empty += 1
                     else:
                         consecutive_empty = 0
                     
+                    # Stop if we've reached 500 numbers
+                    if len(results) >= 500:
+                        break
+                        
                     # Add delay for rate limiting
                     time.sleep(1)
                     break
