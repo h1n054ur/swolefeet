@@ -3,19 +3,81 @@ from twilio_manager.shared.config import ACCOUNT_SID, AUTH_TOKEN
 
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
-def search_available_numbers_api(country, type, capabilities, contains=""):
+import time
+from typing import Dict, List, Set, Tuple, Optional
+from twilio.base.exceptions import TwilioRestException
+
+# Price mapping for different number types and countries
+PRICE_MAP = {
+    ("US", "local"): 1.15,        # US local numbers
+    ("US", "tollfree"): 2.15,     # US toll-free numbers
+    ("US", "mobile"): 1.15,       # US mobile numbers
+    ("GB", "local"): 1.15,        # UK local numbers
+    ("GB", "mobile"): 1.15,       # UK mobile numbers
+    ("GB", "tollfree"): 2.15,     # UK toll-free numbers
+    ("AU", "local"): 3.00,        # AU local numbers
+    ("AU", "mobile"): 6.50,       # AU mobile numbers
+    ("AU", "tollfree"): 16.00,    # AU toll-free numbers
+    ("CA", "local"): 1.15,        # CA local numbers
+    ("CA", "tollfree"): 2.15      # CA toll-free numbers
+}
+
+def format_phone_number(number, country: str, number_type: str) -> Optional[Dict]:
+    """Format a phone number object into our standard dictionary format."""
+    try:
+        # Get capabilities safely
+        caps = getattr(number, 'capabilities', {})
+        if isinstance(caps, (list, tuple)):
+            caps_dict = {
+                "voice": "voice" in caps,
+                "sms": "sms" in caps,
+                "mms": "mms" in caps
+            }
+        else:
+            caps_dict = {
+                "voice": caps.get("voice", False),
+                "sms": caps.get("sms", False),
+                "mms": caps.get("mms", False)
+            }
+
+        # Get monthly price from API or use default from price map
+        try:
+            monthly_rate = float(getattr(number, 'monthly_rate', None) or 0)
+            if monthly_rate == 0:
+                monthly_rate = PRICE_MAP.get((country, number_type), 1.15)
+        except (ValueError, TypeError):
+            monthly_rate = PRICE_MAP.get((country, number_type), 1.15)
+
+        return {
+            "phoneNumber": getattr(number, 'phone_number', '—'),
+            "friendlyName": getattr(number, 'friendly_name', '') or getattr(number, 'phone_number', '—'),
+            "region": getattr(number, 'locality', '') or getattr(number, 'region', '') or "—",
+            "capabilities": caps_dict,
+            "monthlyPrice": monthly_rate
+        }
+    except Exception:
+        return None
+
+def search_available_numbers_api(country: str, type: str, capabilities: List[str], contains: str = "", 
+                               progress_callback=None) -> Tuple[List[Dict], str]:
     """
-    Search for available phone numbers.
+    Search for available phone numbers with pagination and rate limiting.
     
     Args:
         country: Country code (e.g., "US")
         type: Type of number ("local", "tollfree", or "mobile")
         capabilities: List of required capabilities (e.g., ["SMS", "VOICE"])
         contains: Optional pattern to search for in the number
+        progress_callback: Optional callback function to report progress
+    
+    Returns:
+        Tuple of (results list, status message)
     """
     try:
         # Set up search parameters
-        kwargs = {}
+        kwargs = {
+            "limit": 100  # Maximum allowed by Twilio
+        }
         
         # Add capability filters
         if "SMS" in capabilities:
@@ -32,7 +94,7 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         # Add area code if it's a valid US area code pattern
         if country == "US" and contains and contains.isdigit() and len(contains) == 3:
             kwargs["area_code"] = contains
-            kwargs.pop("contains", None)  # Remove contains to avoid conflict
+            kwargs.pop("contains", None)
 
         # Get the appropriate subresource based on type
         type_map = {
@@ -43,72 +105,75 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         
         number_type = type_map.get(type.lower())
         if not number_type:
-            return []
+            return [], "Invalid number type specified"
 
-        # Fetch numbers with limit
-        numbers = list(number_type.list(limit=20, **kwargs))
-
-        # Format results
+        # Initialize tracking variables
         results = []
-        for n in numbers:
-            try:
-                # Get capabilities safely
-                caps = getattr(n, 'capabilities', {})
-                if isinstance(caps, (list, tuple)):
-                    caps_dict = {
-                        "voice": "voice" in caps,
-                        "sms": "sms" in caps,
-                        "mms": "mms" in caps
-                    }
-                else:
-                    caps_dict = {
-                        "voice": caps.get("voice", False),
-                        "sms": caps.get("sms", False),
-                        "mms": caps.get("mms", False)
-                    }
-
-                # Get price based on number type and country
-                price_map = {
-                    ("US", "local"): 1.15,        # US local numbers
-                    ("US", "tollfree"): 2.15,     # US toll-free numbers
-                    ("US", "mobile"): 1.15,       # US mobile numbers
-                    ("GB", "local"): 1.15,        # UK local numbers
-                    ("GB", "mobile"): 1.15,       # UK mobile numbers
-                    ("GB", "tollfree"): 2.15,     # UK toll-free numbers
-                    ("AU", "local"): 3.00,        # AU local numbers
-                    ("AU", "mobile"): 6.50,       # AU mobile numbers
-                    ("AU", "tollfree"): 16.00,    # AU toll-free numbers
-                    ("CA", "local"): 1.15,        # CA local numbers
-                    ("CA", "tollfree"): 2.15      # CA toll-free numbers
-                }
-                
-                # Get monthly price from API or use default from price map
+        seen_numbers: Set[str] = set()
+        consecutive_empty = 0
+        page = 0
+        max_retries = 3
+        
+        while len(results) < 500 and consecutive_empty < 2:
+            page += 1
+            retry_count = 0
+            
+            while retry_count < max_retries:
                 try:
-                    monthly_rate = float(getattr(n, 'monthly_rate', None) or 0)
-                    if monthly_rate == 0:
-                        # If API returns 0, use our price map
-                        monthly_rate = price_map.get((country, type.lower()), 1.15)  # Default to most common price
-                except (ValueError, TypeError):
-                    # If there's any error, use our price map
-                    monthly_rate = price_map.get((country, type.lower()), 1.15)  # Default to most common price
-
-                # Build result dict
-                results.append({
-                    "phoneNumber": getattr(n, 'phone_number', '—'),
-                    "friendlyName": getattr(n, 'friendly_name', '') or getattr(n, 'phone_number', '—'),
-                    "region": getattr(n, 'locality', '') or getattr(n, 'region', '') or "—",
-                    "capabilities": caps_dict,
-                    "monthlyPrice": monthly_rate
-                })
-                
-            except Exception:
-                continue
-
-        return results
+                    # Query the API
+                    numbers = list(number_type.list(page=page, **kwargs))
+                    
+                    # Process results
+                    new_numbers = 0
+                    for n in numbers:
+                        phone_number = getattr(n, 'phone_number', None)
+                        if not phone_number or phone_number in seen_numbers:
+                            continue
+                            
+                        formatted = format_phone_number(n, country, type.lower())
+                        if formatted:
+                            results.append(formatted)
+                            seen_numbers.add(phone_number)
+                            new_numbers += 1
+                    
+                    # Update progress if callback provided
+                    if progress_callback:
+                        progress_callback(len(results))
+                    
+                    # Check if we found any new numbers
+                    if new_numbers == 0:
+                        consecutive_empty += 1
+                    else:
+                        consecutive_empty = 0
+                    
+                    # Add delay for rate limiting
+                    time.sleep(1)
+                    break
+                    
+                except TwilioRestException as e:
+                    if e.status == 429:  # Rate limit error
+                        retry_count += 1
+                        time.sleep(2 ** retry_count)  # Exponential backoff
+                    else:
+                        return results, f"Twilio API error: {str(e)}"
+                except Exception as e:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        return results, f"Error after {max_retries} retries: {str(e)}"
+                    time.sleep(2 ** retry_count)
+        
+        # Determine status message
+        if len(results) >= 500:
+            status = "Found maximum number of results (500)"
+        elif consecutive_empty >= 2:
+            status = "Search completed (no more results available)"
+        else:
+            status = "Search completed successfully"
+        
+        return results, status
 
     except Exception as e:
-        print(f"[service] Search error: {str(e)}")
-        return []
+        return [], f"Unexpected error: {str(e)}"
 
 
 def purchase_number_api(phone_number):
