@@ -14,27 +14,58 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
         contains: Optional pattern to search for in the number
     """
     try:
+        print(f"[DEBUG] Searching for numbers with params:")
+        print(f"  Country: {country}")
+        print(f"  Type: {type}")
+        print(f"  Capabilities: {capabilities}")
+        print(f"  Pattern: {contains}")
+
         # Set up search parameters
-        kwargs = {
-            "sms_enabled": "SMS" in capabilities,
-            "voice_enabled": "VOICE" in capabilities,
-            "mms_enabled": "MMS" in capabilities
-        }
+        kwargs = {}
+        
+        # Add capability filters
+        if "SMS" in capabilities:
+            kwargs["sms_enabled"] = True
+        if "VOICE" in capabilities:
+            kwargs["voice_enabled"] = True
+        if "MMS" in capabilities:
+            kwargs["mms_enabled"] = True
+            
+        # Add pattern if provided
         if contains:
             kwargs["contains"] = contains
+            
+        # Add area code if it's a valid US area code pattern
+        if country == "US" and contains and contains.isdigit() and len(contains) == 3:
+            kwargs["area_code"] = contains
+            # Remove contains to avoid conflict
+            kwargs.pop("contains", None)
+
+        print(f"[DEBUG] Search parameters: {kwargs}")
 
         # Get the appropriate subresource based on type
-        number_type = {
-            "local": lambda: client.available_phone_numbers(country).local,
-            "tollfree": lambda: client.available_phone_numbers(country).toll_free,
-            "mobile": lambda: client.available_phone_numbers(country).mobile
-        }.get(type.lower(), lambda: client.available_phone_numbers(country).local)()
+        type_map = {
+            "local": client.available_phone_numbers(country).local,
+            "tollfree": client.available_phone_numbers(country).toll_free,
+            "mobile": client.available_phone_numbers(country).mobile
+        }
+        
+        number_type = type_map.get(type.lower())
+        if not number_type:
+            print(f"[DEBUG] Invalid number type: {type}")
+            return []
 
-        # Fetch numbers
-        numbers = number_type.list(**kwargs)
+        print(f"[DEBUG] Using number type: {type.lower()}")
+
+        # Fetch numbers with limit to ensure we get some results
+        numbers = number_type.list(limit=20, **kwargs)
+        
+        # Convert to list to check length
+        numbers = list(numbers)
+        print(f"[DEBUG] Found {len(numbers)} numbers")
 
         # Format results
-        return [
+        results = [
             {
                 "sid": n.sid,
                 "phoneNumber": n.phone_number,
@@ -45,11 +76,17 @@ def search_available_numbers_api(country, type, capabilities, contains=""):
                     "sms": n.capabilities.get("sms", False),
                     "mms": n.capabilities.get("mms", False)
                 },
-                "monthlyPrice": n.monthly_rate or 0
+                "monthlyPrice": float(n.monthly_rate or 0)
             } for n in numbers
         ]
+        
+        print(f"[DEBUG] Formatted {len(results)} results")
+        return results
+
     except Exception as e:
-        print(f"[service] Search error: {e}")
+        print(f"[service] Search error: {str(e)}")
+        import traceback
+        print(f"[DEBUG] Full error: {traceback.format_exc()}")
         return []
 
 
