@@ -1,9 +1,9 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
 from twilio_manager.shared.constants import MENU_TITLES
-from twilio_manager.cli.commands.search_command import handle_search_command
-from twilio_manager.cli.commands.purchase_command import handle_purchase_command
-from twilio_manager.cli.commands.configure_command import handle_configure_command
-from twilio_manager.cli.commands.release_command import handle_release_command
+from twilio_manager.cli.menus.search_menu import SearchMenu
+from twilio_manager.cli.menus.purchase_menu import PurchaseMenu
+from twilio_manager.cli.menus.configure_menu import ConfigureMenu
+from twilio_manager.cli.menus.release_menu import ReleaseMenu
 
 class PhoneMenu(BaseMenu):
     def show(self):
@@ -24,10 +24,10 @@ class PhoneMenu(BaseMenu):
             choice (str): The user's selected option
         """
         if choice == "1":
-            handle_search_command()
+            SearchMenu().show()
         elif choice == "2":
-            handle_purchase_command()
+            PurchaseMenu().show()
         elif choice == "3":
-            handle_configure_command()
+            ConfigureMenu().show()
         elif choice == "4":
-            handle_release_command()
+            ReleaseMenu().show()
