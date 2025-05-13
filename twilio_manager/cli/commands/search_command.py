@@ -1,27 +1,27 @@
-from rich.table import Table
 from rich.progress import Progress
 from twilio_manager.core.phone_numbers import search_available_numbers
 from twilio_manager.shared.ui.styling import (
     console,
-    clear_screen,
-    print_header,
+    create_table,
     print_panel,
-    prompt_choice
+    print_success,
+    print_error,
+    print_warning,
+    print_info,
+    prompt_choice,
+    STYLES
 )
 
 def handle_search_command():
     """Handle the search for available phone numbers."""
-    clear_screen()
-    print_header("Search Available Numbers", "🔍")
+
 
     # Country selection
-    print_panel(
-        "[bold]Select country:[/bold]\n"
-        "1. US/Canada (+1)\n"
-        "2. UK (+44)\n"
-        "3. Australia (+61)\n"
-        "4. Other (specify country code)"
-    )
+    print_panel("Select country:", style='highlight')
+    console.print("1. US/Canada (+1)", style=STYLES['data'])
+    console.print("2. UK (+44)", style=STYLES['data'])
+    console.print("3. Australia (+61)", style=STYLES['data'])
+    console.print("4. Other (specify country code)", style=STYLES['data'])
     
     country_choice = prompt_choice("Select country", choices=["1", "2", "3", "4"], default="1")
     country_codes = {
@@ -35,12 +35,10 @@ def handle_search_command():
         country_code = prompt_choice("Enter country code (with +)", choices=None)
 
     # Number type selection
-    print_panel(
-        "[bold]Select number type:[/bold]\n"
-        "1. Local\n"
-        "2. Mobile\n"
-        "3. Toll-Free"
-    )
+    print_panel("Select number type:", style='highlight')
+    console.print("1. Local", style=STYLES['data'])
+    console.print("2. Mobile", style=STYLES['data'])
+    console.print("3. Toll-Free", style=STYLES['data'])
     
     type_choice = prompt_choice("Select type", choices=["1", "2", "3"], default="1")
     number_types = {
@@ -51,13 +49,11 @@ def handle_search_command():
     number_type = number_types[type_choice]
 
     # Capabilities selection
-    print_panel(
-        "[bold]Select capabilities:[/bold]\n"
-        "1. Voice + SMS\n"
-        "2. Voice only\n"
-        "3. SMS only\n"
-        "4. All (Voice + SMS + MMS)"
-    )
+    print_panel("Select capabilities:", style='highlight')
+    console.print("1. Voice + SMS", style=STYLES['data'])
+    console.print("2. Voice only", style=STYLES['data'])
+    console.print("3. SMS only", style=STYLES['data'])
+    console.print("4. All (Voice + SMS + MMS)", style=STYLES['data'])
     
     caps_choice = prompt_choice("Select capabilities", choices=["1", "2", "3", "4"], default="1")
     capabilities_map = {
@@ -69,27 +65,26 @@ def handle_search_command():
     capabilities = capabilities_map[caps_choice]
 
     # Optional pattern
-    print_panel(
-        "[bold]Number pattern (optional):[/bold]\n"
-        "1. No pattern\n"
-        "2. Enter custom pattern"
-    )
+    print_panel("Number pattern (optional):", style='highlight')
+    console.print("1. No pattern", style=STYLES['data'])
+    console.print("2. Enter custom pattern", style=STYLES['data'])
     
     pattern_choice = prompt_choice("Select option", choices=["1", "2"], default="1")
     pattern = "" if pattern_choice == "1" else prompt_choice("Enter pattern (e.g., 555)", choices=None)
 
-    print_panel("[bold yellow]Searching...[/bold yellow]")
+    print_info("Searching...")
 
     # Show search criteria
-    criteria_summary = (
-        "[bold]Search criteria:[/bold]\n"
-        f"Country: [cyan]{country_code}[/cyan]\n"
-        f"Type: [cyan]{number_type}[/cyan]\n"
-        f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]"
-    )
+    print_panel("Search criteria:", style='highlight')
+    console.print("Country:", style=STYLES['dim'])
+    console.print(country_code, style=STYLES['info'])
+    console.print("\nType:", style=STYLES['dim'])
+    console.print(number_type, style=STYLES['info'])
+    console.print("\nCapabilities:", style=STYLES['dim'])
+    console.print(', '.join(capabilities), style=STYLES['info'])
     if pattern:
-        criteria_summary += f"\nPattern: [cyan]{pattern}[/cyan]"
-    print_panel(criteria_summary)
+        console.print("\nPattern:", style=STYLES['dim'])
+        console.print(pattern, style=STYLES['info'])
 
     # Initialize progress bar
     with Progress() as progress:
@@ -117,29 +112,28 @@ def handle_search_command():
 
     # Show search status
     if status.startswith("Error"):
-        print_panel(f"[red]Search error: {status}[/red]")
+        print_error(f"Search error: {status}")
         prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     if not results:
-        error_message = (
-            "[red]No matching numbers found.[/red]\n\n"
-            "Possible reasons:\n"
-            "• No numbers available in the selected region\n"
-            "• No numbers match the selected capabilities\n"
-            "• Pattern too restrictive\n"
-            "• Service not available in the selected region\n\n"
-            "Try:\n"
-            "• Different region\n"
-            "• Fewer capabilities\n"
-            "• Remove pattern"
-        )
-        print_panel(error_message)
+        print_panel("No matching numbers found.", style='error')
+        print_info("\nPossible reasons:")
+        console.print("• No numbers available in the selected region", style=STYLES['data'])
+        console.print("• No numbers match the selected capabilities", style=STYLES['data'])
+        console.print("• Pattern too restrictive", style=STYLES['data'])
+        console.print("• Service not available in the selected region", style=STYLES['data'])
+        
+        print_info("\nTry:")
+        console.print("• Different region", style=STYLES['data'])
+        console.print("• Fewer capabilities", style=STYLES['data'])
+        console.print("• Remove pattern", style=STYLES['data'])
+        
         prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     # Show search summary
-    print_panel(f"[bold green]{status}[/bold green]")
+    print_success(status)
     
     def display_results_page(page_num: int) -> int:
         """Display a page of search results.
@@ -154,25 +148,20 @@ def handle_search_command():
         end_idx = min(start_idx + 50, len(results))
         total_pages = (len(results) + 49) // 50  # Round up division
         
-        table = Table(
-            title=f"[bold]Found {len(results)} Available Numbers (Page {page_num}/{total_pages})[/bold]",
-            show_lines=True
+        table = create_table(
+            columns=["#", "Phone Number", "Region", "Monthly Cost", "Capabilities"],
+            title=f"Found {len(results)} Available Numbers (Page {page_num}/{total_pages})"
         )
-        table.add_column("#", style="dim", justify="right")
-        table.add_column("Phone Number", style="bold cyan")
-        table.add_column("Region", style="green")
-        table.add_column("Monthly Cost", style="yellow")
-        table.add_column("Capabilities", style="magenta")
         
         for idx, number in enumerate(results[start_idx:end_idx], start_idx + 1):
-            # Get capabilities with colors
+            # Get capabilities
             caps = []
             if number.get('capabilities', {}).get('voice'):
-                caps.append("[blue]VOICE[/blue]")
+                caps.append("VOICE")
             if number.get('capabilities', {}).get('sms'):
-                caps.append("[green]SMS[/green]")
+                caps.append("SMS")
             if number.get('capabilities', {}).get('mms'):
-                caps.append("[yellow]MMS[/yellow]")
+                caps.append("MMS")
             
             # Format price with currency
             price = number.get('monthlyPrice', 0)
@@ -187,7 +176,8 @@ def handle_search_command():
                 number.get("phoneNumber", "—"),
                 number.get("region", "—"),
                 price_str,
-                " + ".join(caps) or "—"
+                " + ".join(caps) or "—",
+                style=STYLES['data']
             )
         
         console.print("\n")
@@ -201,15 +191,14 @@ def handle_search_command():
         total_pages = display_results_page(current_page)
         
         # Show navigation and purchase options
-        options = ["0. Return to menu"]
+        print_panel("Options:", style='highlight')
+        console.print("0. Return to menu", style=STYLES['data'])
         if total_pages > 1:
             if current_page > 1:
-                options.append("P/p. Previous page")
+                console.print("P/p. Previous page", style=STYLES['data'])
             if current_page < total_pages:
-                options.append("N/n. Next page")
-        options.append("\nEnter a number from the list above to purchase")
-        
-        print_panel("\n[bold]Options:[/bold]\n" + "\n".join(options))
+                console.print("N/n. Next page", style=STYLES['data'])
+        console.print("\nEnter a number from the list above to purchase", style=STYLES['info'])
         
         # Build choices list
         choices = ["0"]
@@ -236,12 +225,8 @@ def handle_search_command():
             break
         elif selection.upper() == "P" and current_page > 1:
             current_page -= 1
-            clear_screen()
-            print_header("Search Results", "🔍")
         elif selection.upper() == "N" and current_page < total_pages:
             current_page += 1
-            clear_screen()
-            print_header("Search Results", "🔍")
         elif selection.isdigit():
             # Handle purchase
             selected_idx = int(selection) - 1

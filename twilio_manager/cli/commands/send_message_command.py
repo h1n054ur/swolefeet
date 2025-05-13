@@ -1,13 +1,16 @@
-from rich.prompt import Confirm
-from rich.table import Table
 from twilio_manager.core.messaging import send_message, get_recent_contacts
 from twilio_manager.core.phone_numbers import get_active_numbers
 from twilio_manager.shared.ui.styling import (
     console,
-    clear_screen,
-    print_header,
+    create_table,
     print_panel,
-    prompt_choice
+    print_success,
+    print_error,
+    print_warning,
+    print_info,
+    prompt_choice,
+    confirm_action,
+    STYLES
 )
 
 def display_active_numbers(numbers):
@@ -16,18 +19,14 @@ def display_active_numbers(numbers):
     Args:
         numbers (list): List of phone number dictionaries
     """
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="dim")
-    table.add_column("Phone Number", style="cyan")
-    table.add_column("Friendly Name", style="green")
-
+    table = create_table(columns=["#", "Phone Number", "Friendly Name"])
     for idx, number in enumerate(numbers, 1):
         table.add_row(
             str(idx),
             number['phoneNumber'],
-            number.get('friendlyName', 'N/A')
+            number.get('friendlyName', 'N/A'),
+            style=STYLES['data']
         )
-    
     console.print(table)
 
 def display_recent_contacts(contacts):
@@ -36,35 +35,30 @@ def display_recent_contacts(contacts):
     Args:
         contacts (list): List of contact dictionaries
     """
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="dim")
-    table.add_column("Phone Number", style="cyan")
-    table.add_column("Last Contact", style="green")
-
+    table = create_table(columns=["#", "Phone Number", "Last Contact"])
     for idx, contact in enumerate(contacts, 1):
         table.add_row(
             str(idx),
             contact['phoneNumber'],
-            contact.get('lastContact', 'N/A')
+            contact.get('lastContact', 'N/A'),
+            style=STYLES['data']
         )
-    
     console.print(table)
 
 def handle_send_message_command():
     """Handle sending a message."""
-    clear_screen()
-    print_header("Send a Message", "✉️")
+
 
     # Get list of active numbers
     active_numbers = get_active_numbers()
     
     if not active_numbers:
-        print_panel("[yellow]No active numbers found in your account.[/yellow]")
+        print_warning("No active numbers found in your account.")
         prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     # Select sender number
-    print_panel("[bold]Select a number to send from:[/bold]")
+    print_panel("Select a number to send from:", style='highlight')
     display_active_numbers(active_numbers)
 
     max_index = len(active_numbers)
@@ -74,7 +68,7 @@ def handle_send_message_command():
     )
 
     if selection == "0":
-        print_panel("[yellow]Message cancelled.[/yellow]")
+        print_warning("Message cancelled.")
         return
 
     from_number = active_numbers[int(selection) - 1]['phoneNumber']
@@ -83,16 +77,14 @@ def handle_send_message_command():
     recent_contacts = get_recent_contacts()
     
     # Select recipient
-    print_panel(
-        "[bold]Select recipient:[/bold]\n"
-        "1. Choose from recent contacts\n"
-        "2. Enter new number"
-    )
+    print_panel("Select recipient:", style='highlight')
+    console.print("1. Choose from recent contacts", style=STYLES['data'])
+    console.print("2. Enter new number", style=STYLES['data'])
     
     recipient_choice = prompt_choice("Select option", choices=["1", "2"])
     
     if recipient_choice == "1" and recent_contacts:
-        print_panel("[bold]Recent Contacts:[/bold]")
+        print_panel("Recent Contacts:", style='highlight')
         display_recent_contacts(recent_contacts)
         
         max_contact_index = len(recent_contacts)
@@ -112,24 +104,23 @@ def handle_send_message_command():
     body = prompt_choice("\nMessage body", choices=None)
 
     # Show summary and confirm
-    summary = (
-        "[bold]Message Summary:[/bold]\n"
-        f"From: [cyan]{from_number}[/cyan]\n"
-        f"To: [cyan]{to_number}[/cyan]\n"
-        f"Message:\n[green]{body}[/green]"
-    )
-    print_panel(summary)
+    print_panel("Message Summary:", style='highlight')
+    console.print("From:", style=STYLES['dim'])
+    console.print(from_number, style=STYLES['info'])
+    console.print("\nTo:", style=STYLES['dim'])
+    console.print(to_number, style=STYLES['info'])
+    console.print("\nMessage:", style=STYLES['dim'])
+    console.print(body, style=STYLES['info'])
 
-    confirm = Confirm.ask("Send this message?")
-    if not confirm:
-        print_panel("[yellow]Message not sent.[/yellow]")
+    if not confirm_action("Send this message?"):
+        print_warning("Message not sent.")
         return
 
     success = send_message(from_number, to_number, body)
 
     if success:
-        print_panel(f"[green]✅ Message sent successfully to {to_number}![/green]")
+        print_success(f"Message sent successfully to {to_number}!")
     else:
-        print_panel(f"[red]❌ Failed to send message to {to_number}.[/red]")
+        print_error(f"Failed to send message to {to_number}.")
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")

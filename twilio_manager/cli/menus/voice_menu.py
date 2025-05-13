@@ -1,4 +1,5 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
+from twilio_manager.shared.constants import MENU_TITLES
 from twilio_manager.cli.commands.call_command import handle_make_call_command
 from twilio_manager.cli.commands.view_logs_command import handle_view_call_logs_command
 # from cli.commands.recording_command import handle_manage_recordings  # Optional future
@@ -7,7 +8,8 @@ from twilio_manager.cli.commands.view_logs_command import handle_view_call_logs_
 class VoiceMenu(BaseMenu):
     def show(self):
         """Display the voice call management menu."""
-        self.display("Voice Call Management", "📞", {
+        title, emoji = MENU_TITLES["voice"]
+        self.display(title, emoji, {
             "1": "📞 Make a Call",
             "2": "📄 View Call Logs",
             # "3": "🎙 Manage Recordings",

@@ -1,4 +1,5 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
+from twilio_manager.shared.constants import MENU_TITLES
 from twilio_manager.cli.commands.manage_account_command import (
     handle_view_account_info,
     handle_subaccount_management,
@@ -8,7 +9,8 @@ from twilio_manager.cli.commands.manage_account_command import (
 class AccountMenu(BaseMenu):
     def show(self):
         """Display the account management menu."""
-        self.display("Account Management", "🧾", {
+        title, emoji = MENU_TITLES["account"]
+        self.display(title, emoji, {
             "1": "👤 View Account Info / Balance",
             "2": "👥 Manage Subaccounts",
             "3": "🔑 Manage API Keys",
