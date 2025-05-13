@@ -43,16 +43,19 @@ def search_available_numbers(
         logger = get_logger(__name__)
 
         # Clean and validate country code
-        country_code = str(country_code).strip().upper()
-        country = COUNTRY_MAP.get(country_code)
-        
+                # Clean and validate country code (accept dial codes or ISO codes)
+        raw_code = str(country_code).strip()
+        # If user passed an ISO code (e.g. "US"), accept as-is
+        if raw_code.upper() in set(COUNTRY_MAP.values()):
+            country = raw_code.upper()
+        else:
+            # Attempt dial‐code lookup with or without '+'
+            key = raw_code.upper()
+            country = COUNTRY_MAP.get(key) or COUNTRY_MAP.get(key.lstrip('+'))
+
         if not country:
-            # Try without plus
-            country = COUNTRY_MAP.get(country_code.lstrip('+'))
-        
-        if not country:
-            logger.error(f"Invalid country code: {country_code}")
-            return [], f"Invalid country code: {country_code}"
+            logger.error(f"Invalid country code: {raw_code}")
+            return [], f"Invalid country code: {raw_code}"
             
         logger.debug(f"Mapped country code {country_code} to {country}")
         
