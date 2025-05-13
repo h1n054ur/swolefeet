@@ -1,8 +1,4 @@
-from rich.console import Console
 from rich.table import Table
-from rich.prompt import Prompt
-from rich.panel import Panel
-
 from twilio_manager.core.account import (
     get_account_info,
     list_subaccounts,
@@ -10,16 +6,22 @@ from twilio_manager.core.account import (
     list_sip_trunks,
     list_twiml_apps
 )
-
-console = Console()
+from twilio_manager.shared.ui.styling import (
+    console,
+    clear_screen,
+    print_header,
+    print_panel,
+    prompt_choice
+)
 
 def handle_view_account_info():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]👤 Account Info / Balance[/bold cyan]"))
+    """Display account information and balance."""
+    clear_screen()
+    print_header("Account Info / Balance", "👤")
 
     info = get_account_info()
     if not info:
-        console.print("[red]Failed to retrieve account information.[/red]")
+        print_panel("[red]Failed to retrieve account information.[/red]")
     else:
         table = Table(title="Account Info")
         table.add_column("Field", style="cyan")
@@ -29,16 +31,17 @@ def handle_view_account_info():
             table.add_row(key, str(value))
         console.print(table)
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
 
 
 def handle_subaccount_management():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]👥 Subaccount List[/bold cyan]"))
+    """Display list of subaccounts."""
+    clear_screen()
+    print_header("Subaccount List", "👥")
 
     subs = list_subaccounts()
     if not subs:
-        console.print("[yellow]No subaccounts found.[/yellow]")
+        print_panel("[yellow]No subaccounts found.[/yellow]")
     else:
         table = Table(title="Subaccounts", show_lines=True)
         table.add_column("SID", style="cyan")
@@ -50,16 +53,17 @@ def handle_subaccount_management():
 
         console.print(table)
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
 
 
 def handle_api_key_management():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🔑 API Key List[/bold cyan]"))
+    """Display list of API keys."""
+    clear_screen()
+    print_header("API Key List", "🔑")
 
     keys = list_api_keys()
     if not keys:
-        console.print("[yellow]No API keys found.[/yellow]")
+        print_panel("[yellow]No API keys found.[/yellow]")
     else:
         table = Table(title="API Keys", show_lines=True)
         table.add_column("SID", style="cyan")
@@ -70,16 +74,17 @@ def handle_api_key_management():
 
         console.print(table)
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
 
 
 def handle_sip_trunk_menu():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🔌 SIP Trunks[/bold cyan]"))
+    """Display list of SIP trunks."""
+    clear_screen()
+    print_header("SIP Trunks", "🔌")
 
     trunks = list_sip_trunks()
     if not trunks:
-        console.print("[yellow]No SIP trunks found.[/yellow]")
+        print_panel("[yellow]No SIP trunks found.[/yellow]")
     else:
         table = Table(title="SIP Trunks", show_lines=True)
         table.add_column("SID", style="cyan")
@@ -91,16 +96,17 @@ def handle_sip_trunk_menu():
 
         console.print(table)
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
 
 
 def handle_twiml_app_menu():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🧠 TwiML Applications[/bold cyan]"))
+    """Display list of TwiML applications."""
+    clear_screen()
+    print_header("TwiML Applications", "🧠")
 
     apps = list_twiml_apps()
     if not apps:
-        console.print("[yellow]No TwiML applications found.[/yellow]")
+        print_panel("[yellow]No TwiML applications found.[/yellow]")
     else:
         table = Table(title="TwiML Apps", show_lines=True)
         table.add_column("SID", style="cyan")
@@ -112,4 +118,4 @@ def handle_twiml_app_menu():
 
         console.print(table)
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")

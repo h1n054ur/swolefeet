@@ -1,22 +1,24 @@
-from rich.console import Console
 from rich.table import Table
-from rich.prompt import Prompt
-from rich.panel import Panel
-
 from twilio_manager.core.messaging import get_message_logs
 from twilio_manager.core.voice import get_call_logs
-
-console = Console()
+from twilio_manager.shared.ui.styling import (
+    console,
+    clear_screen,
+    print_header,
+    print_panel,
+    prompt_choice
+)
 
 def handle_view_message_logs_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]📄 Message Logs[/bold cyan]"))
+    """Display message logs."""
+    clear_screen()
+    print_header("Message Logs", "📄")
 
     logs = get_message_logs()
 
     if not logs:
-        console.print("[red]No message logs found.[/red]")
-        Prompt.ask("\nPress Enter to return")
+        print_panel("[red]No message logs found.[/red]")
+        prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     table = Table(title="Message Logs", show_lines=True)
@@ -36,18 +38,19 @@ def handle_view_message_logs_command():
         )
 
     console.print(table)
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
 
 
 def handle_view_call_logs_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]📄 Call Logs[/bold cyan]"))
+    """Display call logs."""
+    clear_screen()
+    print_header("Call Logs", "📄")
 
     logs = get_call_logs()
 
     if not logs:
-        console.print("[red]No call logs found.[/red]")
-        Prompt.ask("\nPress Enter to return")
+        print_panel("[red]No call logs found.[/red]")
+        prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     table = Table(title="Call Logs", show_lines=True)
@@ -67,4 +70,4 @@ def handle_view_call_logs_command():
         )
 
     console.print(table)
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")

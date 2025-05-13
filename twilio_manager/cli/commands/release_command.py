@@ -1,12 +1,20 @@
-from rich.console import Console
-from rich.prompt import Prompt, Confirm
-from rich.panel import Panel
+from rich.prompt import Confirm
 from rich.table import Table
 from twilio_manager.core.phone_numbers import release_number, get_active_numbers
-
-console = Console()
+from twilio_manager.shared.ui.styling import (
+    console,
+    clear_screen,
+    print_header,
+    print_panel,
+    prompt_choice
+)
 
 def display_active_numbers(numbers):
+    """Display a table of active phone numbers.
+    
+    Args:
+        numbers (list): List of phone number dictionaries
+    """
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("#", style="dim")
     table.add_column("Phone Number", style="cyan")
@@ -24,29 +32,30 @@ def display_active_numbers(numbers):
     console.print(table)
 
 def handle_release_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🗑 Release a Phone Number[/bold cyan]"))
+    """Handle the release of a phone number."""
+    clear_screen()
+    print_header("Release a Phone Number", "🗑")
 
     # Get list of active numbers
     active_numbers = get_active_numbers()
     
     if not active_numbers:
-        console.print("[yellow]No active numbers found in your account.[/yellow]")
-        Prompt.ask("\nPress Enter to return")
+        print_panel("[yellow]No active numbers found in your account.[/yellow]")
+        prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
-    console.print("\n[bold]Active Numbers:[/bold]")
+    print_panel("[bold]Active Numbers:[/bold]")
     display_active_numbers(active_numbers)
 
     # Let user select a number by index
     max_index = len(active_numbers)
-    selection = Prompt.ask(
+    selection = prompt_choice(
         "\nSelect a number to release (0 to cancel)",
         choices=[str(i) for i in range(max_index + 1)]
     )
 
     if selection == "0":
-        console.print("[yellow]Release cancelled.[/yellow]")
+        print_panel("[yellow]Release cancelled.[/yellow]")
         return
 
     selected_number = active_numbers[int(selection) - 1]
@@ -56,14 +65,14 @@ def handle_release_command():
     )
     
     if not confirm:
-        console.print("[yellow]Release cancelled.[/yellow]")
+        print_panel("[yellow]Release cancelled.[/yellow]")
         return
 
     success = release_number(selected_number['sid'])
 
     if success:
-        console.print(f"[green]✅ Number {selected_number['phoneNumber']} released successfully.[/green]")
+        print_panel(f"[green]✅ Number {selected_number['phoneNumber']} released successfully.[/green]")
     else:
-        console.print(f"[red]❌ Failed to release number {selected_number['phoneNumber']}.[/red]")
+        print_panel(f"[red]❌ Failed to release number {selected_number['phoneNumber']}.[/red]")
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
