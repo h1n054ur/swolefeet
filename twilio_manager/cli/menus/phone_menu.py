@@ -1,6 +1,6 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
 from twilio_manager.shared.constants import MENU_TITLES
-from twilio_manager.cli.menus.search_menu import SearchMenu
+from twilio_manager.cli.menus.search.search_menu import SearchMenu
 from twilio_manager.cli.menus.purchase_menu import PurchaseMenu
 from twilio_manager.cli.menus.configure_menu import ConfigureMenu
 from twilio_manager.cli.menus.release_menu import ReleaseMenu
