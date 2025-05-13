@@ -46,20 +46,30 @@ class SearchMenu(BaseMenu):
             console.print(params['pattern'], style=STYLES['info'])
 
         # Initialize progress bar
-        with Progress() as progress:
+        with Progress(
+            "[progress.description]{task.description}",
+            "[progress.percentage]{task.percentage:>3.0f}%",
+            "{task.completed}/{task.total}",
+            "•",
+            "[cyan]{task.fields[status]}"
+        ) as progress:
             search_task = progress.add_task(
                 description="[cyan]🔍 Searching for numbers...",
-                total=500
+                total=500,
+                status="Initializing..."
             )
             
             def update_progress(count):
                 progress.update(
                     search_task,
                     completed=min(count, 500),
-                    description=f"[cyan]Found {count} numbers"
+                    status=f"Found {count} numbers"
                 )
+                # Force refresh display
+                progress.refresh()
             
             # Search for numbers with progress tracking
+            console.print()  # Add blank line before progress
             results, status = search_available_numbers(
                 params['country_code'],
                 params['number_type'],
@@ -67,6 +77,7 @@ class SearchMenu(BaseMenu):
                 params['pattern'],
                 progress_callback=update_progress
             )
+            console.print()  # Add blank line after progress
 
         # Show search status
         if status.startswith("Error"):

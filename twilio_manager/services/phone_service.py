@@ -230,6 +230,13 @@ class PhoneService:
             max_retries = 3
             retry_count = 0
             
+            # Initial progress update
+            if progress_callback:
+                try:
+                    progress_callback(0)  # Show initial state
+                except Exception as e:
+                    logger.error(f"Error in progress callback: {e}")
+            
             while len(results) < 500 and consecutive_no_unique < 2:
                 try:
                     # Log request parameters
@@ -273,9 +280,12 @@ class PhoneService:
                             if len(results) >= 500:
                                 break
                     
-                    # Update progress
+                    # Update progress after each batch
                     if progress_callback:
-                        progress_callback(len(results))
+                        try:
+                            progress_callback(len(results))
+                        except Exception as e:
+                            logger.error(f"Error in progress callback: {e}")
                     
                     # Check if we found new unique numbers
                     if new_unique == 0:
@@ -283,7 +293,12 @@ class PhoneService:
                     else:
                         consecutive_no_unique = 0
                     
-                    # Rate limiting
+                    # Rate limiting with progress update
+                    if progress_callback:
+                        try:
+                            progress_callback(len(results))  # Update before sleep
+                        except Exception as e:
+                            logger.error(f"Error in progress callback: {e}")
                     time.sleep(1)
                     
                 except requests.exceptions.RequestException as e:
