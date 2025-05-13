@@ -1,7 +1,7 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
 from twilio_manager.shared.constants import MENU_TITLES
 from twilio_manager.cli.commands.call_command import handle_make_call_command
-from twilio_manager.cli.commands.view_logs_command import handle_view_call_logs_command
+from twilio_manager.cli.menus.view_call_logs_menu import ViewCallLogsMenu
 # from cli.commands.recording_command import handle_manage_recordings  # Optional future
 # from cli.commands.conference_command import handle_conference_calls  # Optional future
 
@@ -26,7 +26,7 @@ class VoiceMenu(BaseMenu):
         if choice == "1":
             handle_make_call_command()
         elif choice == "2":
-            handle_view_call_logs_command()
+            ViewCallLogsMenu().show()
         # elif choice == "3":
         #     handle_manage_recordings()
         # elif choice == "4":
