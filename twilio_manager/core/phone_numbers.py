@@ -39,14 +39,30 @@ def search_available_numbers(
         Tuple of (results list, status message)
     """
     try:
-        # Get ISO country code, default to US if not found
-        country = COUNTRY_MAP.get(country_code, 'US')
+        from twilio_manager.shared.utils.logger import get_logger
+        logger = get_logger(__name__)
+
+        # Clean and validate country code
+        country_code = str(country_code).strip().upper()
+        country = COUNTRY_MAP.get(country_code)
+        
+        if not country:
+            # Try without plus
+            country = COUNTRY_MAP.get(country_code.lstrip('+'))
+        
+        if not country:
+            logger.error(f"Invalid country code: {country_code}")
+            return [], f"Invalid country code: {country_code}"
+            
+        logger.debug(f"Mapped country code {country_code} to {country}")
         
         # Default capabilities if none provided
         if capabilities is None:
             capabilities = ["SMS", "VOICE"]
         elif isinstance(capabilities, str):
             capabilities = [capabilities]
+            
+        logger.debug(f"Using capabilities: {capabilities}")
             
         # Convert capabilities to uppercase and deduplicate
         capabilities = list(set(cap.upper() for cap in capabilities))
