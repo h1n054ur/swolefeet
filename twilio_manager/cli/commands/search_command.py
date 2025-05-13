@@ -1,142 +1,136 @@
+from rich.console import Console
 from rich.table import Table
-from rich.prompt import Prompt
+from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
 from tqdm import tqdm
 
-from twilio_manager.cli.menus.base_menu import BaseMenu, SearchResultsMenu
 from twilio_manager.core.phone_numbers import search_available_numbers
 
-class SearchCriteriaMenu(BaseMenu):
-    def __init__(self):
-        super().__init__("Search Available Numbers", "🔍")
-        self.country_code = None
-        self.number_type = None
-        self.capabilities = None
-        self.pattern = None
+console = Console()
 
-    def get_country_code(self):
-        self.console.print("\n[bold]Select country:[/bold]")
-        self.console.print("1. US/Canada (+1)")
-        self.console.print("2. UK (+44)")
-        self.console.print("3. Australia (+61)")
-        self.console.print("4. Other (specify country code)")
+def handle_search_command():
+    console.clear()
+    console.print(Panel.fit("[bold cyan]🔍 Search Available Numbers[/bold cyan]"))
+
+    # Country selection
+    console.print("\n[bold]Select country:[/bold]")
+    console.print("1. US/Canada (+1)")
+    console.print("2. UK (+44)")
+    console.print("3. Australia (+61)")
+    console.print("4. Other (specify country code)")
+    
+    country_choice = Prompt.ask("Select country", choices=["1", "2", "3", "4"], default="1")
+    country_codes = {
+        "1": "+1",
+        "2": "+44",
+        "3": "+61"
+    }
+    
+    country_code = country_codes.get(country_choice)
+    if country_choice == "4":
+        country_code = Prompt.ask("Enter country code (with +)")
+
+    # Number type selection
+    console.print("\n[bold]Select number type:[/bold]")
+    console.print("1. Local")
+    console.print("2. Mobile")
+    console.print("3. Toll-Free")
+    
+    type_choice = Prompt.ask("Select type", choices=["1", "2", "3"], default="1")
+    number_types = {
+        "1": "local",
+        "2": "mobile",
+        "3": "tollfree"
+    }
+    number_type = number_types[type_choice]
+
+    # Capabilities selection
+    console.print("\n[bold]Select capabilities:[/bold]")
+    console.print("1. Voice + SMS")
+    console.print("2. Voice only")
+    console.print("3. SMS only")
+    console.print("4. All (Voice + SMS + MMS)")
+    
+    caps_choice = Prompt.ask("Select capabilities", choices=["1", "2", "3", "4"], default="1")
+    capabilities_map = {
+        "1": ["VOICE", "SMS"],
+        "2": ["VOICE"],
+        "3": ["SMS"],
+        "4": ["VOICE", "SMS", "MMS"]
+    }
+    capabilities = capabilities_map[caps_choice]
+
+    # Optional pattern
+    console.print("\n[bold]Number pattern (optional):[/bold]")
+    console.print("1. No pattern")
+    console.print("2. Enter custom pattern")
+    
+    pattern_choice = Prompt.ask("Select option", choices=["1", "2"], default="1")
+    pattern = "" if pattern_choice == "1" else Prompt.ask("Enter pattern (e.g., 555)")
+
+    console.print("\n[bold yellow]Searching...[/bold yellow]")
+
+    # Show search criteria
+    console.print("\n[bold]Search criteria:[/bold]")
+    console.print(f"Country: [cyan]{country_code}[/cyan]")
+    console.print(f"Type: [cyan]{number_type}[/cyan]")
+    console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
+    if pattern:
+        console.print(f"Pattern: [cyan]{pattern}[/cyan]")
+
+    # Show search criteria
+    console.print("\n[bold]Search criteria:[/bold]")
+    console.print(f"Country: [cyan]{country_code}[/cyan]")
+    console.print(f"Type: [cyan]{number_type}[/cyan]")
+    console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
+    if pattern:
+        console.print(f"Pattern: [cyan]{pattern}[/cyan]")
+
+    # Initialize progress bar
+    with tqdm(total=500, desc="🔍 Searching for numbers", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} numbers") as pbar:
+        def update_progress(count):
+            pbar.n = min(count, 500)
+            pbar.refresh()
         
-        country_choice = Prompt.ask("Select country", choices=["1", "2", "3", "4"], default="1")
-        country_codes = {
-            "1": "+1",
-            "2": "+44",
-            "3": "+61"
-        }
-        
-        self.country_code = country_codes.get(country_choice)
-        if country_choice == "4":
-            self.country_code = Prompt.ask("Enter country code (with +)")
+        # Search for numbers with progress tracking
+        results, status = search_available_numbers(
+            country_code, 
+            number_type, 
+            capabilities, 
+            pattern,
+            progress_callback=update_progress
+        )
 
-    def get_number_type(self):
-        self.console.print("\n[bold]Select number type:[/bold]")
-        self.console.print("1. Local")
-        self.console.print("2. Mobile")
-        self.console.print("3. Toll-Free")
-        
-        type_choice = Prompt.ask("Select type", choices=["1", "2", "3"], default="1")
-        number_types = {
-            "1": "local",
-            "2": "mobile",
-            "3": "tollfree"
-        }
-        self.number_type = number_types[type_choice]
+    # Show search status
+    if status.startswith("Error"):
+        console.print(f"\n[red]Search error: {status}[/red]")
+        Prompt.ask("\nPress Enter to return")
+        return
 
-    def get_capabilities(self):
-        self.console.print("\n[bold]Select capabilities:[/bold]")
-        self.console.print("1. Voice + SMS")
-        self.console.print("2. Voice only")
-        self.console.print("3. SMS only")
-        self.console.print("4. All (Voice + SMS + MMS)")
-        
-        caps_choice = Prompt.ask("Select capabilities", choices=["1", "2", "3", "4"], default="1")
-        capabilities_map = {
-            "1": ["VOICE", "SMS"],
-            "2": ["VOICE"],
-            "3": ["SMS"],
-            "4": ["VOICE", "SMS", "MMS"]
-        }
-        self.capabilities = capabilities_map[caps_choice]
+    if not results:
+        console.print("\n[red]No matching numbers found.[/red]")
+        console.print("\nPossible reasons:")
+        console.print("• No numbers available in the selected region")
+        console.print("• No numbers match the selected capabilities")
+        console.print("• Pattern too restrictive")
+        console.print("• Service not available in the selected region")
+        console.print("\nTry:")
+        console.print("• Different region")
+        console.print("• Fewer capabilities")
+        console.print("• Remove pattern")
+        Prompt.ask("\nPress Enter to return")
+        return
 
-    def get_pattern(self):
-        self.console.print("\n[bold]Number pattern (optional):[/bold]")
-        self.console.print("1. No pattern")
-        self.console.print("2. Enter custom pattern")
-        
-        pattern_choice = Prompt.ask("Select option", choices=["1", "2"], default="1")
-        self.pattern = "" if pattern_choice == "1" else Prompt.ask("Enter pattern (e.g., 555)")
-
-    def show_criteria(self):
-        self.console.print("\n[bold]Search criteria:[/bold]")
-        self.console.print(f"Country: [cyan]{self.country_code}[/cyan]")
-        self.console.print(f"Type: [cyan]{self.number_type}[/cyan]")
-        self.console.print(f"Capabilities: [cyan]{', '.join(self.capabilities)}[/cyan]")
-        if self.pattern:
-            self.console.print(f"Pattern: [cyan]{self.pattern}[/cyan]")
-
-    def show(self):
-        self.clear_screen()
-        self.show_title()
-        
-        self.get_country_code()
-        self.get_number_type()
-        self.get_capabilities()
-        self.get_pattern()
-
-        self.console.print("\n[bold yellow]Searching...[/bold yellow]")
-        self.show_criteria()
-
-        # Initialize progress bar
-        with tqdm(total=500, desc="🔍 Searching for numbers", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} numbers") as pbar:
-            def update_progress(count):
-                pbar.n = min(count, 500)
-                pbar.refresh()
-            
-            # Search for numbers with progress tracking
-            results, status = search_available_numbers(
-                self.country_code, 
-                self.number_type, 
-                self.capabilities, 
-                self.pattern,
-                progress_callback=update_progress
-            )
-
-        if status.startswith("Error"):
-            self.console.print(f"\n[red]Search error: {status}[/red]")
-            Prompt.ask("\nPress Enter to return")
-            return None
-
-        if not results:
-            self.console.print("\n[red]No matching numbers found.[/red]")
-            self.console.print("\nPossible reasons:")
-            self.console.print("• No numbers available in the selected region")
-            self.console.print("• No numbers match the selected capabilities")
-            self.console.print("• Pattern too restrictive")
-            self.console.print("• Service not available in the selected region")
-            self.console.print("\nTry:")
-            self.console.print("• Different region")
-            self.console.print("• Fewer capabilities")
-            self.console.print("• Remove pattern")
-            Prompt.ask("\nPress Enter to return")
-            return None
-
-        self.console.print(f"\n[bold green]{status}[/bold green]")
-        return results
-
-class PhoneNumberResultsMenu(SearchResultsMenu):
-    def __init__(self, results):
-        super().__init__("Search Results", results)
-
-    def display_results_page(self):
-        start_idx = (self.current_page - 1) * self.page_size
-        end_idx = min(start_idx + self.page_size, len(self.results))
+    # Show search summary
+    console.print(f"\n[bold green]{status}[/bold green]")
+    
+    def display_results_page(page_num: int) -> int:
+        start_idx = (page_num - 1) * 50
+        end_idx = min(start_idx + 50, len(results))
+        total_pages = (len(results) + 49) // 50  # Round up division
         
         table = Table(
-            title=f"[bold]Found {len(self.results)} Available Numbers (Page {self.current_page}/{self.total_pages})[/bold]",
+            title=f"[bold]Found {len(results)} Available Numbers (Page {page_num}/{total_pages})[/bold]",
             show_lines=True
         )
         table.add_column("#", style="dim", justify="right")
@@ -145,7 +139,7 @@ class PhoneNumberResultsMenu(SearchResultsMenu):
         table.add_column("Monthly Cost", style="yellow")
         table.add_column("Capabilities", style="magenta")
         
-        for idx, number in enumerate(self.results[start_idx:end_idx], start_idx + 1):
+        for idx, number in enumerate(results[start_idx:end_idx], start_idx + 1):
             # Get capabilities with colors
             caps = []
             if number.get('capabilities', {}).get('voice'):
@@ -171,30 +165,60 @@ class PhoneNumberResultsMenu(SearchResultsMenu):
                 " + ".join(caps) or "—"
             )
         
-        self.console.print("\n")
-        self.console.print(table)
-
-        # Show navigation options
-        self.console.print("\n[bold]Options:[/bold]")
-        self.console.print("0. Return to menu")
-        if self.total_pages > 1:
-            if self.current_page > 1:
-                self.console.print("P/p. Previous page")
-            if self.current_page < self.total_pages:
-                self.console.print("N/n. Next page")
-        self.console.print("\nEnter a number from the list above to purchase")
-
-    def handle_item_selection(self, index: int) -> bool:
-        from twilio_manager.cli.commands.purchase_command import handle_purchase_command
-        handle_purchase_command(self.results[index]['phoneNumber'])
-        return True
-
-def handle_search_command():
-    search_menu = SearchCriteriaMenu()
-    results = search_menu.show()
+        console.print("\n")
+        console.print(table)
+        
+        return total_pages
     
-    if results:
-        results_menu = PhoneNumberResultsMenu(results)
-        results_menu.show()
-    
-    return False  # Don't exit the parent menu
+    # Handle pagination and purchase options
+    current_page = 1
+    while True:
+        total_pages = display_results_page(current_page)
+        
+        # Show navigation and purchase options
+        console.print("\n[bold]Options:[/bold]")
+        console.print("0. Return to menu")
+        if total_pages > 1:
+            if current_page > 1:
+                console.print("P/p. Previous page")
+            if current_page < total_pages:
+                console.print("N/n. Next page")
+        console.print("\nEnter a number from the list above to purchase")
+        
+        # Build choices list
+        choices = ["0"]
+        if total_pages > 1:
+            if current_page > 1:
+                choices.extend(["P", "p"])
+            if current_page < total_pages:
+                choices.extend(["N", "n"])
+        
+        # Add number choices for current page but don't show them in prompt
+        start_idx = (current_page - 1) * 50
+        end_idx = min(start_idx + 50, len(results))
+        valid_numbers = [str(i) for i in range(start_idx + 1, end_idx + 1)]
+        choices.extend(valid_numbers)
+        
+        selection = Prompt.ask(
+            "Select an option",
+            choices=choices,
+            show_choices=False,
+            default="0"
+        )
+        
+        if selection == "0":
+            break
+        elif selection.upper() == "P" and current_page > 1:
+            current_page -= 1
+            console.clear()
+            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
+        elif selection.upper() == "N" and current_page < total_pages:
+            current_page += 1
+            console.clear()
+            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
+        elif selection.isdigit():
+            # Handle purchase
+            selected_idx = int(selection) - 1
+            from twilio_manager.cli.commands.purchase_command import handle_purchase_command
+            handle_purchase_command(results[selected_idx]['phoneNumber'])
+            break
