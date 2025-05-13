@@ -107,9 +107,8 @@ def run_number_search(params):
     # Initialize progress bar
     with Progress() as progress:
         search_task = progress.add_task(
-            "[cyan]🔍 Searching for numbers...",
-            total=500,
-            description="[cyan]Searching"
+            description="[cyan]🔍 Searching for numbers...",
+            total=500
         )
         
         def update_progress(count):
@@ -242,7 +241,6 @@ def display_search_results(results, status):
         selection = prompt_choice(
             "Select an option",
             choices=choices,
-            show_choices=False,
             default="0"
         )
         
