@@ -29,6 +29,7 @@ class SearchResultsMenu(BaseMenu):
         """Display search results with pagination."""
         if not self.results:
             self.handle_empty_result("No phone numbers found matching your criteria.")
+            return
 
         current_page = 1
         while True:
@@ -37,7 +38,7 @@ class SearchResultsMenu(BaseMenu):
             total_pages = self._display_results_page(current_page)
             
             # Show navigation and purchase options
-            self.print_info("Options:")
+            self.print_info("\nOptions:")
             self.print_option("0", "Return to menu")
             if total_pages > 1:
                 if current_page > 1:
@@ -67,7 +68,8 @@ class SearchResultsMenu(BaseMenu):
             )
             
             if selection == "0":
-                break
+                self.return_to_parent()
+                return
             elif selection.upper() == "P" and current_page > 1:
                 current_page -= 1
             elif selection.upper() == "N" and current_page < total_pages:
@@ -82,7 +84,8 @@ class SearchResultsMenu(BaseMenu):
                 else:
                     self.print_error(f"Failed to purchase number: {error}")
                     self.pause_and_return()
-                break
+                self.return_to_parent()
+                return
 
     def _display_results_page(self, page_num: int) -> int:
         """Display a page of search results.
