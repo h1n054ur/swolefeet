@@ -1,14 +1,13 @@
-from twilio_manager.cli.menus.main_menu import show_main_menu
-from rich.console import Console
+from twilio_manager.cli.menus.main_menu import MainMenu
+from twilio_manager.shared.ui.styling import console, clear_screen
 import sys
-
-console = Console()
 
 def run_cli():
     try:
-        console.clear()
+        clear_screen()
         console.rule("[bold green]Twilio CLI Manager")
-        show_main_menu()
+        main_menu = MainMenu()
+        main_menu.show()
     except KeyboardInterrupt:
         console.print("\n[red]Exited by user.[/red]")
         sys.exit(0)
