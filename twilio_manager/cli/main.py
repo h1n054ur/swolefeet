@@ -5,7 +5,6 @@ import sys
 def run_cli():
     try:
         clear_screen()
-        console.rule("[bold green]Twilio CLI Manager")
         main_menu = MainMenu()
         main_menu.show()
     except KeyboardInterrupt:

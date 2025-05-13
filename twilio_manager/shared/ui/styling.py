@@ -34,7 +34,7 @@ def print_header(title, emoji=""):
         title (str): The title text to display
         emoji (str): Optional emoji to display before the title
     """
-    console.print(Panel.fit(f"[bold cyan]{emoji} {title}[/bold cyan]", title=f"{title} Menu"))
+    console.print(f"[bold cyan]{emoji} {title}[/bold cyan]\n")
 
 def prompt_choice(prompt_text, choices, default="0"):
     """Prompt the user to make a choice from a list of options.
