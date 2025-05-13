@@ -5,19 +5,27 @@ from rich.panel import Panel
 from tqdm import tqdm
 
 from twilio_manager.core.phone_numbers import search_available_numbers
+from twilio_manager.cli.menus.base_menu import BaseMenu
 
-console = Console()
+class SearchMenu(BaseMenu):
+    def __init__(self):
+        super().__init__("🔍 Search Available Numbers", "Search Numbers")
+        self.console = Console()
+
+    def _setup_options(self):
+        pass  # This menu doesn't use standard options
 
 def handle_search_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🔍 Search Available Numbers[/bold cyan]"))
+    menu = SearchMenu()
+    menu.clear_screen()
+    menu.show_title()
 
     # Country selection
-    console.print("\n[bold]Select country:[/bold]")
-    console.print("1. US/Canada (+1)")
-    console.print("2. UK (+44)")
-    console.print("3. Australia (+61)")
-    console.print("4. Other (specify country code)")
+    menu.console.print("\n[bold]Select country:[/bold]")
+    menu.console.print("1. US/Canada (+1)")
+    menu.console.print("2. UK (+44)")
+    menu.console.print("3. Australia (+61)")
+    menu.console.print("4. Other (specify country code)")
     
     country_choice = Prompt.ask("Select country", choices=["1", "2", "3", "4"], default="1")
     country_codes = {
@@ -31,10 +39,10 @@ def handle_search_command():
         country_code = Prompt.ask("Enter country code (with +)")
 
     # Number type selection
-    console.print("\n[bold]Select number type:[/bold]")
-    console.print("1. Local")
-    console.print("2. Mobile")
-    console.print("3. Toll-Free")
+    menu.console.print("\n[bold]Select number type:[/bold]")
+    menu.console.print("1. Local")
+    menu.console.print("2. Mobile")
+    menu.console.print("3. Toll-Free")
     
     type_choice = Prompt.ask("Select type", choices=["1", "2", "3"], default="1")
     number_types = {
@@ -45,11 +53,11 @@ def handle_search_command():
     number_type = number_types[type_choice]
 
     # Capabilities selection
-    console.print("\n[bold]Select capabilities:[/bold]")
-    console.print("1. Voice + SMS")
-    console.print("2. Voice only")
-    console.print("3. SMS only")
-    console.print("4. All (Voice + SMS + MMS)")
+    menu.console.print("\n[bold]Select capabilities:[/bold]")
+    menu.console.print("1. Voice + SMS")
+    menu.console.print("2. Voice only")
+    menu.console.print("3. SMS only")
+    menu.console.print("4. All (Voice + SMS + MMS)")
     
     caps_choice = Prompt.ask("Select capabilities", choices=["1", "2", "3", "4"], default="1")
     capabilities_map = {
@@ -61,30 +69,22 @@ def handle_search_command():
     capabilities = capabilities_map[caps_choice]
 
     # Optional pattern
-    console.print("\n[bold]Number pattern (optional):[/bold]")
-    console.print("1. No pattern")
-    console.print("2. Enter custom pattern")
+    menu.console.print("\n[bold]Number pattern (optional):[/bold]")
+    menu.console.print("1. No pattern")
+    menu.console.print("2. Enter custom pattern")
     
     pattern_choice = Prompt.ask("Select option", choices=["1", "2"], default="1")
     pattern = "" if pattern_choice == "1" else Prompt.ask("Enter pattern (e.g., 555)")
 
-    console.print("\n[bold yellow]Searching...[/bold yellow]")
+    menu.console.print("\n[bold yellow]Searching...[/bold yellow]")
 
     # Show search criteria
-    console.print("\n[bold]Search criteria:[/bold]")
-    console.print(f"Country: [cyan]{country_code}[/cyan]")
-    console.print(f"Type: [cyan]{number_type}[/cyan]")
-    console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
+    menu.console.print("\n[bold]Search criteria:[/bold]")
+    menu.console.print(f"Country: [cyan]{country_code}[/cyan]")
+    menu.console.print(f"Type: [cyan]{number_type}[/cyan]")
+    menu.console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
     if pattern:
-        console.print(f"Pattern: [cyan]{pattern}[/cyan]")
-
-    # Show search criteria
-    console.print("\n[bold]Search criteria:[/bold]")
-    console.print(f"Country: [cyan]{country_code}[/cyan]")
-    console.print(f"Type: [cyan]{number_type}[/cyan]")
-    console.print(f"Capabilities: [cyan]{', '.join(capabilities)}[/cyan]")
-    if pattern:
-        console.print(f"Pattern: [cyan]{pattern}[/cyan]")
+        menu.console.print(f"Pattern: [cyan]{pattern}[/cyan]")
 
     # Initialize progress bar
     with tqdm(total=500, desc="🔍 Searching for numbers", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} numbers") as pbar:
@@ -103,26 +103,26 @@ def handle_search_command():
 
     # Show search status
     if status.startswith("Error"):
-        console.print(f"\n[red]Search error: {status}[/red]")
-        Prompt.ask("\nPress Enter to return")
+        menu.console.print(f"\n[red]Search error: {status}[/red]")
+        menu.prompt_enter()
         return
 
     if not results:
-        console.print("\n[red]No matching numbers found.[/red]")
-        console.print("\nPossible reasons:")
-        console.print("• No numbers available in the selected region")
-        console.print("• No numbers match the selected capabilities")
-        console.print("• Pattern too restrictive")
-        console.print("• Service not available in the selected region")
-        console.print("\nTry:")
-        console.print("• Different region")
-        console.print("• Fewer capabilities")
-        console.print("• Remove pattern")
-        Prompt.ask("\nPress Enter to return")
+        menu.console.print("\n[red]No matching numbers found.[/red]")
+        menu.console.print("\nPossible reasons:")
+        menu.console.print("• No numbers available in the selected region")
+        menu.console.print("• No numbers match the selected capabilities")
+        menu.console.print("• Pattern too restrictive")
+        menu.console.print("• Service not available in the selected region")
+        menu.console.print("\nTry:")
+        menu.console.print("• Different region")
+        menu.console.print("• Fewer capabilities")
+        menu.console.print("• Remove pattern")
+        menu.prompt_enter()
         return
 
     # Show search summary
-    console.print(f"\n[bold green]{status}[/bold green]")
+    menu.console.print(f"\n[bold green]{status}[/bold green]")
     
     def display_results_page(page_num: int) -> int:
         start_idx = (page_num - 1) * 50
@@ -165,8 +165,8 @@ def handle_search_command():
                 " + ".join(caps) or "—"
             )
         
-        console.print("\n")
-        console.print(table)
+        menu.console.print("\n")
+        menu.console.print(table)
         
         return total_pages
     
@@ -176,14 +176,14 @@ def handle_search_command():
         total_pages = display_results_page(current_page)
         
         # Show navigation and purchase options
-        console.print("\n[bold]Options:[/bold]")
-        console.print("0. Return to menu")
+        menu.console.print("\n[bold]Options:[/bold]")
+        menu.console.print("0. Return to menu")
         if total_pages > 1:
             if current_page > 1:
-                console.print("P/p. Previous page")
+                menu.console.print("P/p. Previous page")
             if current_page < total_pages:
-                console.print("N/n. Next page")
-        console.print("\nEnter a number from the list above to purchase")
+                menu.console.print("N/n. Next page")
+        menu.console.print("\nEnter a number from the list above to purchase")
         
         # Build choices list
         choices = ["0"]
@@ -210,12 +210,12 @@ def handle_search_command():
             break
         elif selection.upper() == "P" and current_page > 1:
             current_page -= 1
-            console.clear()
-            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
+            menu.clear_screen()
+            menu.show_title("Search Results")
         elif selection.upper() == "N" and current_page < total_pages:
             current_page += 1
-            console.clear()
-            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
+            menu.clear_screen()
+            menu.show_title("Search Results")
         elif selection.isdigit():
             # Handle purchase
             selected_idx = int(selection) - 1
