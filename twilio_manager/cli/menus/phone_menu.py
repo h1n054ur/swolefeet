@@ -6,6 +6,14 @@ from twilio_manager.cli.menus.configure_menu import ConfigureMenu
 from twilio_manager.cli.menus.release_menu import ReleaseMenu
 
 class PhoneMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize phone menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
+
     def show(self):
         """Display the phone number management menu."""
         title, emoji = MENU_TITLES["phone"]
@@ -24,10 +32,10 @@ class PhoneMenu(BaseMenu):
             choice (str): The user's selected option
         """
         if choice == "1":
-            SearchMenu().show()
+            SearchMenu(parent=self).show()
         elif choice == "2":
-            PurchaseMenu().show()
+            PurchaseMenu(parent=self).show()
         elif choice == "3":
-            ConfigureMenu().show()
+            ConfigureMenu(parent=self).show()
         elif choice == "4":
-            ReleaseMenu().show()
+            ReleaseMenu(parent=self).show()

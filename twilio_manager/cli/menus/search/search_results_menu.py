@@ -13,29 +13,38 @@ from twilio_manager.shared.ui.styling import (
 )
 
 class SearchResultsMenu(BaseMenu):
-    def __init__(self, results, status):
-        super().__init__()
+    def __init__(self, results, status, parent=None):
+        """Initialize search results menu.
+        
+        Args:
+            results (list): List of phone number results
+            status (str): Search status message
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
         self.results = results
         self.status = status
 
     def show(self):
         """Display search results with pagination."""
         if not self.results:
-            return
+            self.handle_empty_result("No phone numbers found matching your criteria.")
 
         current_page = 1
         while True:
+            self.clear()
+            self.print_title("Search Results", "📱")
             total_pages = self._display_results_page(current_page)
             
             # Show navigation and purchase options
-            print_panel("Options:", style='highlight')
-            console.print("0. Return to menu", style=STYLES['data'])
+            self.print_info("Options:")
+            self.print_option("0", "Return to menu")
             if total_pages > 1:
                 if current_page > 1:
-                    console.print("P/p. Previous page", style=STYLES['data'])
+                    self.print_option("P", "Previous page")
                 if current_page < total_pages:
-                    console.print("N/n. Next page", style=STYLES['data'])
-            console.print("\nEnter a number from the list above to purchase", style=STYLES['info'])
+                    self.print_option("N", "Next page")
+            self.print_info("\nEnter a number from the list above to purchase")
             
             # Build choices list
             choices = ["0"]
@@ -51,10 +60,10 @@ class SearchResultsMenu(BaseMenu):
             valid_numbers = [str(i) for i in range(start_idx + 1, end_idx + 1)]
             choices.extend(valid_numbers)
             
-            selection = prompt_choice(
+            selection = self.get_choice(
+                choices,
                 "Select an option",
-                choices=choices,
-                default="0"
+                "0"
             )
             
             if selection == "0":
@@ -67,7 +76,12 @@ class SearchResultsMenu(BaseMenu):
                 # Handle purchase
                 selected_idx = int(selection) - 1
                 from twilio_manager.cli.commands.purchase_command import handle_purchase_command
-                handle_purchase_command(self.results[selected_idx]['phoneNumber'])
+                success, error = handle_purchase_command(self.results[selected_idx]['phoneNumber'])
+                if success:
+                    self.pause_and_return("Phone number purchased successfully!")
+                else:
+                    self.print_error(f"Failed to purchase number: {error}")
+                    self.pause_and_return()
                 break
 
     def _display_results_page(self, page_num: int) -> int:

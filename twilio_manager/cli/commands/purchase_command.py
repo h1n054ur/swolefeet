@@ -21,7 +21,10 @@ def search_available_numbers_by_country(country_code):
     Returns:
         list: Available numbers or None if none found
     """
-    return search_available_numbers(country_code)
+    results, error = search_available_numbers(country_code)
+    if error:
+        return None
+    return results
 
 def purchase_phone_number(phone_number):
     """Purchase a phone number.
@@ -30,7 +33,7 @@ def purchase_phone_number(phone_number):
         phone_number (str): Phone number to purchase
         
     Returns:
-        bool: True if purchase successful, False otherwise
+        Tuple[bool, Optional[str]]: (success, error_message)
     """
     return purchase_number(phone_number)
 

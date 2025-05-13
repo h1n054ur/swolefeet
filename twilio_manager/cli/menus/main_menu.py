@@ -8,6 +8,14 @@ from twilio_manager.cli.menus.account_menu import AccountMenu
 from twilio_manager.cli.menus.advanced_menu import AdvancedMenu
 
 class MainMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize main menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
+
     def show(self):
         """Display the main menu."""
         self.display(APP_TITLE, APP_EMOJI, {
@@ -26,14 +34,16 @@ class MainMenu(BaseMenu):
             choice (str): The user's selected option
         """
         if choice == "1":
-            PhoneMenu().show()
+            PhoneMenu(parent=self).show()
         elif choice == "2":
-            MessagingMenu().show()
+            MessagingMenu(parent=self).show()
         elif choice == "3":
-            VoiceMenu().show()
+            VoiceMenu(parent=self).show()
         elif choice == "4":
-            AccountMenu().show()
+            AccountMenu(parent=self).show()
         elif choice == "5":
-            AdvancedMenu().show()
+            AdvancedMenu(parent=self).show()
         elif choice == "0":
+            self.clear()
             console.print("\n[green]Goodbye![/green]")
+            exit(0)  # Only use exit() in main menu

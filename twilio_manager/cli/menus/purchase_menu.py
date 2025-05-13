@@ -93,12 +93,13 @@ class PurchaseConfirmationMenu(BaseMenu):
             self.print_warning("Purchase cancelled.")
             return False
 
-        success = purchase_phone_number(self.phone_number)
+        success, error = purchase_phone_number(self.phone_number)
 
         if success:
             self.print_success(f"Number {self.phone_number} purchased successfully!")
         else:
-            self.print_error(f"Failed to purchase number {self.phone_number}.")
+            error_msg = error or "Unknown error"
+            self.print_error(f"Failed to purchase number {self.phone_number}: {error_msg}")
 
         self.get_choice([""], "\nPress Enter to return", "")
         return success
