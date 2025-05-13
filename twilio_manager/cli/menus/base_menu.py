@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any
-from rich.console import Console
-from rich.panel import Panel
 from rich.prompt import Prompt
+
+from twilio_manager.shared.styles import (
+    console, COLORS, ICONS,
+    show_title as show_styled_title,
+    print_success, print_error, print_warning
+)
 
 class BaseMenu(ABC):
     def __init__(self, title: str, menu_title: str = "Menu"):
-        self.console = Console()
+        self.console = console  # Use shared console instance
         self.title = title
         self.menu_title = menu_title
         self._options: Dict[str, tuple[str, Any]] = {}
@@ -23,11 +27,11 @@ class BaseMenu(ABC):
 
     def _display_menu(self) -> None:
         """Display the menu with consistent styling."""
-        self.console.clear()
-        self.console.print(Panel.fit(f"[bold cyan]{self.title}[/bold cyan]", title=self.menu_title))
+        self.clear_screen()
+        show_styled_title(self.title, self.menu_title)
         
         for key, (label, _) in self._options.items():
-            self.console.print(f"[bold magenta]{key}.[/bold magenta] {label}")
+            self.console.print(f"[{COLORS['header']}]{key}.[/{COLORS['header']}] {label}")
         self.console.print()
 
     def _get_valid_choices(self) -> List[str]:
@@ -62,11 +66,20 @@ class BaseMenu(ABC):
 
     def show_title(self, subtitle: Optional[str] = None) -> None:
         """Show a title panel with optional subtitle."""
-        title_text = f"[bold cyan]{self.title}[/bold cyan]"
-        if subtitle:
-            title_text += f"\n[dim cyan]{subtitle}[/dim cyan]"
-        self.console.print(Panel.fit(title_text, title=self.menu_title))
+        show_styled_title(self.title, subtitle)
 
     def prompt_enter(self, message: str = "Press Enter to continue") -> None:
         """Show a prompt to press Enter."""
         Prompt.ask(f"\n{message}")
+
+    def print_success(self, message: str) -> None:
+        """Print a success message."""
+        print_success(message)
+
+    def print_error(self, message: str) -> None:
+        """Print an error message."""
+        print_error(message)
+
+    def print_warning(self, message: str) -> None:
+        """Print a warning message."""
+        print_warning(message)
