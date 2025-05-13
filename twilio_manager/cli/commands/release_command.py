@@ -29,17 +29,19 @@ def display_active_numbers(numbers):
         )
     console.print(table)
 
-def handle_release_command():
-    """Handle the release of a phone number."""
-
-
+def get_number_to_release():
+    """Get the number to release from user selection.
+    
+    Returns:
+        dict: Selected number info or None if cancelled/no numbers
+    """
     # Get list of active numbers
     active_numbers = get_active_numbers()
     
     if not active_numbers:
         print_warning("No active numbers found in your account.")
         prompt_choice("\nPress Enter to return", choices=[""], default="")
-        return
+        return None
 
     print_panel("Active Numbers:", style='highlight')
     display_active_numbers(active_numbers)
@@ -53,22 +55,44 @@ def handle_release_command():
 
     if selection == "0":
         print_warning("Release cancelled.")
-        return
+        return None
 
-    selected_number = active_numbers[int(selection) - 1]
+    return active_numbers[int(selection) - 1]
+
+def confirm_release_action(number):
+    """Confirm the release action with the user.
+    
+    Args:
+        number (dict): Number information
+        
+    Returns:
+        bool: True if confirmed, False if cancelled
+    """
     if not confirm_action(
-        f"Are you sure you want to release number {selected_number['phoneNumber']}? "
+        f"Are you sure you want to release number {number['phoneNumber']}? "
         "This action is irreversible.",
         style='error'
     ):
         print_warning("Release cancelled.")
-        return
+        return False
+    return True
 
-    success = release_number(selected_number['sid'])
+def execute_number_release(number):
+    """Execute the release of a phone number.
+    
+    Args:
+        number (dict): Number information to release
+    """
+    success = release_number(number['sid'])
 
     if success:
-        print_success(f"Number {selected_number['phoneNumber']} released successfully.")
+        print_success(f"Number {number['phoneNumber']} released successfully.")
     else:
-        print_error(f"Failed to release number {selected_number['phoneNumber']}.")
+        print_error(f"Failed to release number {number['phoneNumber']}.")
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
+
+def handle_release_command():
+    """Handle the release of a phone number."""
+    from twilio_manager.cli.menus.release_menu import ReleaseMenu
+    ReleaseMenu().show()
