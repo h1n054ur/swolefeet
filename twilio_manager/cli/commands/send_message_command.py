@@ -45,17 +45,19 @@ def display_recent_contacts(contacts):
         )
     console.print(table)
 
-def handle_send_message_command():
-    """Handle sending a message."""
-
-
+def collect_message_inputs():
+    """Collect all inputs needed for sending a message.
+    
+    Returns:
+        dict: Message inputs or None if cancelled
+    """
     # Get list of active numbers
     active_numbers = get_active_numbers()
     
     if not active_numbers:
         print_warning("No active numbers found in your account.")
         prompt_choice("\nPress Enter to return", choices=[""], default="")
-        return
+        return None
 
     # Select sender number
     print_panel("Select a number to send from:", style='highlight')
@@ -69,7 +71,7 @@ def handle_send_message_command():
 
     if selection == "0":
         print_warning("Message cancelled.")
-        return
+        return None
 
     from_number = active_numbers[int(selection) - 1]['phoneNumber']
 
@@ -103,6 +105,38 @@ def handle_send_message_command():
     # Get message body
     body = prompt_choice("\nMessage body", choices=None)
 
+    return {
+        'from_number': from_number,
+        'to_number': to_number,
+        'body': body
+    }
+
+def validate_recipient_number(number):
+    """Validate the recipient's phone number format.
+    
+    Args:
+        number (str): Phone number to validate
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Basic E.164 format validation
+    if not number.startswith('+'):
+        return False
+    if not number[1:].isdigit():
+        return False
+    if len(number) < 8 or len(number) > 15:  # E.164 length limits
+        return False
+    return True
+
+def send_message_with_confirmation(from_number, to_number, body):
+    """Send a message after showing summary and getting confirmation.
+    
+    Args:
+        from_number (str): Sender's phone number
+        to_number (str): Recipient's phone number
+        body (str): Message body
+    """
     # Show summary and confirm
     print_panel("Message Summary:", style='highlight')
     console.print("From:", style=STYLES['dim'])
@@ -124,3 +158,70 @@ def handle_send_message_command():
         print_error(f"Failed to send message to {to_number}.")
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
+
+def get_message_sid():
+    """Get message SID from user input.
+    
+    Returns:
+        str: Message SID or None if cancelled
+    """
+    print_panel("Delete Message", style='highlight')
+    print_info("Enter the SID of the message to delete.")
+    print_info("You can find the SID in the message logs.")
+    
+    message_sid = prompt_choice(
+        "\nMessage SID (0 to cancel)",
+        choices=None,
+        default="0"
+    )
+    
+    if message_sid == "0":
+        print_warning("Deletion cancelled.")
+        return None
+        
+    return message_sid
+
+def confirm_deletion_prompt(message_sid):
+    """Confirm message deletion with the user.
+    
+    Args:
+        message_sid (str): Message SID
+        
+    Returns:
+        bool: True if confirmed, False if cancelled
+    """
+    if not confirm_action(
+        f"Are you sure you want to delete message {message_sid}? "
+        "This action is irreversible.",
+        style='error'
+    ):
+        print_warning("Deletion cancelled.")
+        return False
+    return True
+
+def delete_message_by_sid(message_sid):
+    """Delete a message by its SID.
+    
+    Args:
+        message_sid (str): Message SID
+    """
+    from twilio_manager.core.messaging import delete_message
+    
+    success = delete_message(message_sid)
+    
+    if success:
+        print_success(f"Message {message_sid} deleted successfully!")
+    else:
+        print_error(f"Failed to delete message {message_sid}.")
+    
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
+
+def handle_delete_message_command():
+    """Handle message deletion."""
+    from twilio_manager.cli.menus.delete_message_menu import DeleteMessageMenu
+    DeleteMessageMenu().show()
+
+def handle_send_message_command():
+    """Handle sending a message."""
+    from twilio_manager.cli.menus.send_message_menu import SendMessageMenu
+    SendMessageMenu().show()
