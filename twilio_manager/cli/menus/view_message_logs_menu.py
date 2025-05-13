@@ -78,7 +78,6 @@ class ViewMessageLogsMenu(BaseMenu):
             choice = prompt_choice(
                 "Select an option",
                 choices=choices,
-                show_choices=False,
                 default="0"
             )
 
