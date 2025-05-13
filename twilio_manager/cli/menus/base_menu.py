@@ -6,6 +6,9 @@ from twilio_manager.shared.ui.styling import (
     STYLES
 )
 from twilio_manager.shared.constants import MENU_TITLES
+from twilio_manager.shared.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 class BaseMenu:
     def __init__(self, parent=None):
@@ -31,16 +34,22 @@ class BaseMenu:
             emoji (str): Emoji to display with the title
             options (dict): Dictionary mapping option keys to their descriptions
         """
+        logger.debug(f"Displaying menu: {title}")
         while True:
-            self.clear()
-            self.print_title(title, emoji)
-            for key, desc in options.items():
-                console.print(f"[bold magenta]{key}.[/bold magenta] {desc}")
-            choice = self.get_choice(list(options.keys()))
-            if choice == "0":
-                self.return_to_parent()
-                break
-            self.handle_choice(choice)
+            try:
+                self.clear()
+                self.print_title(title, emoji)
+                for key, desc in options.items():
+                    console.print(f"[bold magenta]{key}.[/bold magenta] {desc}")
+                choice = self.get_choice(list(options.keys()))
+                if choice == "0":
+                    logger.debug("User selected to return to parent menu")
+                    self.return_to_parent()
+                    break
+                self.handle_choice(choice)
+            except Exception as e:
+                logger.error(f"Error in menu display loop: {str(e)}", exc_info=True)
+                self.print_error("An unexpected error occurred. Please try again.")
 
     def handle_choice(self, choice):
         """Handle the user's menu choice. Must be implemented by subclasses.
@@ -56,9 +65,12 @@ class BaseMenu:
     def return_to_parent(self):
         """Return to the parent menu or main menu."""
         from twilio_manager.cli.menus.main_menu import MainMenu
+        logger.debug("Returning to parent menu")
         if self.parent:
+            logger.debug(f"Parent menu exists: {self.parent.__class__.__name__}")
             self.parent.show()
         else:
+            logger.debug("No parent menu, returning to main menu")
             MainMenu().show()
 
     def pause_and_return(self, message=None):
@@ -78,6 +90,7 @@ class BaseMenu:
         Args:
             message (str, optional): Message to display
         """
+        logger.warning(f"Empty result set: {message}")
         self.print_warning(message)
         self.pause_and_return()
 
@@ -105,7 +118,13 @@ class BaseMenu:
         Returns:
             str: The user's choice
         """
-        return prompt_choice(prompt, choices=choices, default=default)
+        try:
+            choice = prompt_choice(prompt, choices=choices, default=default)
+            logger.debug(f"User input received: {choice}")
+            return choice
+        except Exception as e:
+            logger.error(f"Error getting user choice: {str(e)}", exc_info=True)
+            return default
 
     def print_option(self, key, description, style=STYLES['data']):
         """Print a menu option with consistent styling.
@@ -133,6 +152,7 @@ class BaseMenu:
             message (str): The message to display
             style (str, optional): Style to apply to the message
         """
+        logger.error(message)
         console.print(message, style=style)
 
     def print_success(self, message, style=STYLES['success']):
@@ -151,4 +171,5 @@ class BaseMenu:
             message (str): The message to display
             style (str, optional): Style to apply to the message
         """
+        logger.warning(message)
         console.print(message, style=style)
