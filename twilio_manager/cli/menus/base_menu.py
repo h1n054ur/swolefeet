@@ -1,4 +1,9 @@
-from twilio_manager.shared.ui.styling import clear_screen, print_header, prompt_choice
+from twilio_manager.shared.ui.styling import (
+    clear_screen,
+    print_header,
+    prompt_choice,
+    console
+)
 
 class BaseMenu:
     def display(self, title, emoji, options):
@@ -13,7 +18,7 @@ class BaseMenu:
             clear_screen()
             print_header(title, emoji)
             for key, desc in options.items():
-                print(f"[bold magenta]{key}.[/bold magenta] {desc}")
+                console.print(f"[bold magenta]{key}.[/bold magenta] {desc}")
             choice = prompt_choice("Choose an option", choices=list(options.keys()), default="0")
             if choice == "0":
                 break
