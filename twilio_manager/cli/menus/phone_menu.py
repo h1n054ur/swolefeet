@@ -1,4 +1,5 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
+from twilio_manager.shared.constants import MENU_TITLES
 from twilio_manager.cli.commands.search_command import handle_search_command
 from twilio_manager.cli.commands.purchase_command import handle_purchase_command
 from twilio_manager.cli.commands.configure_command import handle_configure_command
@@ -7,7 +8,8 @@ from twilio_manager.cli.commands.release_command import handle_release_command
 class PhoneMenu(BaseMenu):
     def show(self):
         """Display the phone number management menu."""
-        self.display("Phone Number Management", "📞", {
+        title, emoji = MENU_TITLES["phone"]
+        self.display(title, emoji, {
             "1": "🔍 Search Available Numbers",
             "2": "🛒 Purchase a Number",
             "3": "⚙️  Configure a Number",

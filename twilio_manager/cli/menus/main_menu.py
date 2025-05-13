@@ -1,5 +1,6 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
 from twilio_manager.shared.ui.styling import console
+from twilio_manager.shared.constants import MENU_TITLES, APP_TITLE, APP_EMOJI
 from twilio_manager.cli.menus.phone_menu import PhoneMenu
 from twilio_manager.cli.menus.messaging_menu import MessagingMenu
 from twilio_manager.cli.menus.voice_menu import VoiceMenu
@@ -9,7 +10,7 @@ from twilio_manager.cli.menus.advanced_menu import AdvancedMenu
 class MainMenu(BaseMenu):
     def show(self):
         """Display the main menu."""
-        self.display("Twilio CLI Manager", "📘", {
+        self.display(APP_TITLE, APP_EMOJI, {
             "1": "📞 Phone Numbers",
             "2": "📨 Messaging",
             "3": "📞 Voice",

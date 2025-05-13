@@ -4,6 +4,7 @@ from twilio_manager.shared.ui.styling import (
     prompt_choice,
     console
 )
+from twilio_manager.shared.constants import MENU_TITLES
 
 class BaseMenu:
     def display(self, title, emoji, options):

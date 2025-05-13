@@ -1,4 +1,3 @@
-from rich.table import Table
 from twilio_manager.core.account import (
     get_account_info,
     list_subaccounts,
@@ -8,27 +7,26 @@ from twilio_manager.core.account import (
 )
 from twilio_manager.shared.ui.styling import (
     console,
-    clear_screen,
-    print_header,
+    create_table,
     print_panel,
-    prompt_choice
+    print_success,
+    print_error,
+    print_warning,
+    print_info,
+    prompt_choice,
+    STYLES
 )
 
 def handle_view_account_info():
     """Display account information and balance."""
-    clear_screen()
-    print_header("Account Info / Balance", "👤")
 
     info = get_account_info()
     if not info:
-        print_panel("[red]Failed to retrieve account information.[/red]")
+        print_error("Failed to retrieve account information.")
     else:
-        table = Table(title="Account Info")
-        table.add_column("Field", style="cyan")
-        table.add_column("Value", style="white")
-
+        table = create_table(columns=["Field", "Value"], title="Account Info")
         for key, value in info.items():
-            table.add_row(key, str(value))
+            table.add_row(key, str(value), style=STYLES['data'])
         console.print(table)
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
@@ -36,21 +34,14 @@ def handle_view_account_info():
 
 def handle_subaccount_management():
     """Display list of subaccounts."""
-    clear_screen()
-    print_header("Subaccount List", "👥")
 
     subs = list_subaccounts()
     if not subs:
-        print_panel("[yellow]No subaccounts found.[/yellow]")
+        print_warning("No subaccounts found.")
     else:
-        table = Table(title="Subaccounts", show_lines=True)
-        table.add_column("SID", style="cyan")
-        table.add_column("Name", style="green")
-        table.add_column("Status", style="magenta")
-
+        table = create_table(columns=["SID", "Name", "Status"], title="Subaccounts")
         for sub in subs:
-            table.add_row(sub["sid"], sub["friendly_name"], sub["status"])
-
+            table.add_row(sub["sid"], sub["friendly_name"], sub["status"], style=STYLES['data'])
         console.print(table)
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
@@ -58,20 +49,14 @@ def handle_subaccount_management():
 
 def handle_api_key_management():
     """Display list of API keys."""
-    clear_screen()
-    print_header("API Key List", "🔑")
 
     keys = list_api_keys()
     if not keys:
-        print_panel("[yellow]No API keys found.[/yellow]")
+        print_warning("No API keys found.")
     else:
-        table = Table(title="API Keys", show_lines=True)
-        table.add_column("SID", style="cyan")
-        table.add_column("Friendly Name", style="green")
-
+        table = create_table(columns=["SID", "Friendly Name"], title="API Keys")
         for key in keys:
-            table.add_row(key["sid"], key["friendly_name"])
-
+            table.add_row(key["sid"], key["friendly_name"], style=STYLES['data'])
         console.print(table)
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
@@ -79,21 +64,14 @@ def handle_api_key_management():
 
 def handle_sip_trunk_menu():
     """Display list of SIP trunks."""
-    clear_screen()
-    print_header("SIP Trunks", "🔌")
 
     trunks = list_sip_trunks()
     if not trunks:
-        print_panel("[yellow]No SIP trunks found.[/yellow]")
+        print_warning("No SIP trunks found.")
     else:
-        table = Table(title="SIP Trunks", show_lines=True)
-        table.add_column("SID", style="cyan")
-        table.add_column("Friendly Name", style="green")
-        table.add_column("Voice Region", style="magenta")
-
+        table = create_table(columns=["SID", "Friendly Name", "Voice Region"], title="SIP Trunks")
         for trunk in trunks:
-            table.add_row(trunk["sid"], trunk["friendly_name"], trunk.get("voice_region", "—"))
-
+            table.add_row(trunk["sid"], trunk["friendly_name"], trunk.get("voice_region", "—"), style=STYLES['data'])
         console.print(table)
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
@@ -101,21 +79,14 @@ def handle_sip_trunk_menu():
 
 def handle_twiml_app_menu():
     """Display list of TwiML applications."""
-    clear_screen()
-    print_header("TwiML Applications", "🧠")
 
     apps = list_twiml_apps()
     if not apps:
-        print_panel("[yellow]No TwiML applications found.[/yellow]")
+        print_warning("No TwiML applications found.")
     else:
-        table = Table(title="TwiML Apps", show_lines=True)
-        table.add_column("SID", style="cyan")
-        table.add_column("Name", style="green")
-        table.add_column("Voice URL", style="magenta")
-
+        table = create_table(columns=["SID", "Name", "Voice URL"], title="TwiML Apps")
         for app in apps:
-            table.add_row(app["sid"], app["friendly_name"], app.get("voice_url", "—"))
-
+            table.add_row(app["sid"], app["friendly_name"], app.get("voice_url", "—"), style=STYLES['data'])
         console.print(table)
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
