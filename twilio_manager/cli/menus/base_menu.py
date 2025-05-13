@@ -17,9 +17,15 @@ def with_loading(message: str = None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             spinner = Spinner("dots", text=message or StyleConfig.LOADING_MESSAGES["default"])
-            with Live(spinner, refresh_per_second=10):
-                result = func(*args, **kwargs)
-            return result
+            try:
+                with Live(spinner, refresh_per_second=10):
+                    result = func(*args, **kwargs)
+                return result
+            except Exception as e:
+                console.clear()
+                console.print(f"[error]Error: {str(e)}[/error]")
+                console.input("\nPress Enter to continue...")
+                return True  # Continue showing menu
         return wrapper
     return decorator
 
@@ -83,11 +89,11 @@ class BaseMenu:
                 try:
                     self.clear_screen()  # Clear screen before executing handler
                     result = option["handler"]()
-                    if not result:  # If handler returns False, exit menu
+                    if result is False:  # Only exit if explicitly False
                         return False
                     return True
                 except Exception as e:
-                    self.clear_screen()
+                    console.clear()
                     console.print(f"[error]Error: {str(e)}[/error]")
                     console.input("\nPress Enter to continue...")
                     return True
@@ -104,6 +110,7 @@ class BaseMenu:
                     self.clear_screen()  # Clear screen before exiting
                     break
             except Exception as e:
-                self.console.print(f"[error]Error: {str(e)}[/error]")
-                self.console.input("\nPress Enter to continue...")
+                console.clear()
+                console.print(f"[error]Error: {str(e)}[/error]")
+                console.input("\nPress Enter to continue...")
                 continue
