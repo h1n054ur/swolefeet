@@ -46,9 +46,14 @@ class BaseMenu:
         self.has_back = True
         self.add_option("0", "Back", lambda: True, "back")
     
+    def clear_screen(self) -> None:
+        """Clear the screen properly."""
+        console.clear()
+        console.print("\033[2J\033[H", end="")  # ANSI escape codes for full screen clear
+
     def render_menu(self) -> None:
         """Render the menu with consistent styling."""
-        console.clear()
+        self.clear_screen()
         console.print(Panel.fit(
             StyleConfig.format_menu_title(self.title, self.menu_type),
             title=self.menu_type
@@ -76,17 +81,29 @@ class BaseMenu:
         for option in self.options:
             if option["key"] == choice:
                 try:
-                    return option["handler"]()
+                    self.clear_screen()  # Clear screen before executing handler
+                    result = option["handler"]()
+                    if not result:  # If handler returns False, exit menu
+                        return False
+                    return True
                 except Exception as e:
+                    self.clear_screen()
                     console.print(f"[error]Error: {str(e)}[/error]")
+                    console.input("\nPress Enter to continue...")
                     return True
         return True
     
     def show(self) -> None:
         """Show the menu and handle user input."""
         while True:
-            self.render_menu()
-            choice = self.get_choice()
-            
-            if not self.handle_choice(choice):
-                break
+            try:
+                self.render_menu()
+                choice = self.get_choice()
+                
+                if not self.handle_choice(choice):
+                    self.clear_screen()  # Clear screen before exiting
+                    break
+            except Exception as e:
+                self.console.print(f"[error]Error: {str(e)}[/error]")
+                self.console.input("\nPress Enter to continue...")
+                continue
