@@ -1,12 +1,16 @@
-from rich.console import Console
-from rich.prompt import Prompt, Confirm
-from rich.panel import Panel
+from rich.prompt import Confirm
 from rich.table import Table
 from twilio_manager.core.phone_numbers import configure_number, get_active_numbers
-
-console = Console()
+from twilio_manager.shared.ui.styling import (
+    console,
+    clear_screen,
+    print_header,
+    print_panel,
+    prompt_choice
+)
 
 def display_active_numbers(numbers):
+    """Display a table of active phone numbers."""
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("#", style="dim", justify="right")
     table.add_column("Phone Number", style="cyan")
@@ -26,83 +30,92 @@ def display_active_numbers(numbers):
     console.print(table)
 
 def handle_configure_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]⚙️ Configure a Phone Number[/bold cyan]"))
+    clear_screen()
+    print_header("Configure a Phone Number", "⚙️")
 
     # Get active numbers
     active_numbers = get_active_numbers()
     
     if not active_numbers:
-        console.print("[yellow]No active numbers found in your account.[/yellow]")
-        Prompt.ask("\nPress Enter to return")
+        print_panel("[yellow]No active numbers found in your account.[/yellow]")
+        prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     # Display active numbers
-    console.print("\n[bold]Select a number to configure:[/bold]")
+    print_panel("\n[bold]Select a number to configure:[/bold]")
     display_active_numbers(active_numbers)
 
     # Select number
     max_index = len(active_numbers)
-    selection = Prompt.ask(
+    selection = prompt_choice(
         "\nSelect a number (0 to cancel)",
         choices=[str(i) for i in range(max_index + 1)]
     )
 
     if selection == "0":
-        console.print("[yellow]Configuration cancelled.[/yellow]")
+        print_panel("[yellow]Configuration cancelled.[/yellow]")
         return
 
     selected_number = active_numbers[int(selection) - 1]
     
     # Show current settings
-    console.print(f"\n[bold]Current settings for {selected_number['phoneNumber']}:[/bold]")
-    console.print(f"Friendly Name: [cyan]{selected_number.get('friendlyName', 'N/A')}[/cyan]")
-    console.print(f"Voice URL: [cyan]{selected_number.get('voiceUrl', 'N/A')}[/cyan]")
-    console.print(f"SMS URL: [cyan]{selected_number.get('smsUrl', 'N/A')}[/cyan]")
+    print_panel(
+        f"Current settings for {selected_number['phoneNumber']}:\n"
+        f"Friendly Name: [cyan]{selected_number.get('friendlyName', 'N/A')}[/cyan]\n"
+        f"Voice URL: [cyan]{selected_number.get('voiceUrl', 'N/A')}[/cyan]\n"
+        f"SMS URL: [cyan]{selected_number.get('smsUrl', 'N/A')}[/cyan]"
+    )
 
     # Configuration options
-    console.print("\n[bold]What would you like to configure?[/bold]")
-    console.print("1. Friendly Name")
-    console.print("2. Voice Webhook URL")
-    console.print("3. SMS Webhook URL")
-    console.print("4. All Settings")
+    print_panel(
+        "[bold]What would you like to configure?[/bold]\n"
+        "1. Friendly Name\n"
+        "2. Voice Webhook URL\n"
+        "3. SMS Webhook URL\n"
+        "4. All Settings"
+    )
     
-    config_choice = Prompt.ask("Select option", choices=["1", "2", "3", "4"])
+    config_choice = prompt_choice("Select option", choices=["1", "2", "3", "4"])
     
     friendly_name = None
     voice_url = None
     sms_url = None
     
     if config_choice in ["1", "4"]:
-        friendly_name = Prompt.ask(
+        friendly_name = prompt_choice(
             "Enter new friendly name",
+            choices=None,
             default=selected_number.get('friendlyName', '')
         )
     
     if config_choice in ["2", "4"]:
-        voice_url = Prompt.ask(
+        voice_url = prompt_choice(
             "Enter new voice webhook URL",
+            choices=None,
             default=selected_number.get('voiceUrl', '')
         )
     
     if config_choice in ["3", "4"]:
-        sms_url = Prompt.ask(
+        sms_url = prompt_choice(
             "Enter new SMS webhook URL",
+            choices=None,
             default=selected_number.get('smsUrl', '')
         )
 
     # Show summary of changes
-    console.print("\n[bold]Review Changes:[/bold]")
+    changes_summary = "[bold]Review Changes:[/bold]\n"
     if friendly_name:
-        console.print(f"Friendly Name: [red]{selected_number.get('friendlyName', 'N/A')}[/red] → [green]{friendly_name}[/green]")
+        changes_summary += f"Friendly Name: [red]{selected_number.get('friendlyName', 'N/A')}[/red] → [green]{friendly_name}[/green]\n"
     if voice_url:
-        console.print(f"Voice URL: [red]{selected_number.get('voiceUrl', 'N/A')}[/red] → [green]{voice_url}[/green]")
+        changes_summary += f"Voice URL: [red]{selected_number.get('voiceUrl', 'N/A')}[/red] → [green]{voice_url}[/green]\n"
     if sms_url:
-        console.print(f"SMS URL: [red]{selected_number.get('smsUrl', 'N/A')}[/red] → [green]{sms_url}[/green]")
+        changes_summary += f"SMS URL: [red]{selected_number.get('smsUrl', 'N/A')}[/red] → [green]{sms_url}[/green]"
+    
+    print_panel(changes_summary)
 
     confirm = Confirm.ask("\n[bold yellow]Apply these changes?[/bold yellow]")
     if not confirm:
-        console.print("[yellow]Configuration cancelled.[/yellow]")
+        print_panel("[yellow]Configuration cancelled.[/yellow]")
         return
 
     success = configure_number(
@@ -113,8 +126,8 @@ def handle_configure_command():
     )
 
     if success:
-        console.print(f"[green]✅ Number configured successfully![/green]")
+        print_panel("[green]✅ Number configured successfully![/green]")
     else:
-        console.print(f"[red]❌ Failed to update number settings.[/red]")
+        print_panel("[red]❌ Failed to update number settings.[/red]")
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")

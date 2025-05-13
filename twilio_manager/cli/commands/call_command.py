@@ -1,12 +1,15 @@
-from rich.console import Console
-from rich.prompt import Prompt, Confirm
-from rich.panel import Panel
+from rich.prompt import Confirm
 from rich.table import Table
 from twilio_manager.core.voice import make_call
 from twilio_manager.core.phone_numbers import get_active_numbers
 from twilio_manager.core.messaging import get_recent_contacts
-
-console = Console()
+from twilio_manager.shared.ui.styling import (
+    console,
+    clear_screen,
+    print_header,
+    print_panel,
+    prompt_choice
+)
 
 def display_phone_numbers(numbers):
     """Display a table of available phone numbers."""
@@ -46,15 +49,15 @@ def display_recent_contacts(contacts):
     console.print(table)
 
 def handle_make_call_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]📞 Make a Voice Call[/bold cyan]"))
+    clear_screen()
+    print_header("Make a Voice Call", "📞")
 
     # Get active numbers with voice capability
     active_numbers = [n for n in get_active_numbers() if n.get('capabilities', {}).get('voice', False)]
     
     if not active_numbers:
-        console.print("[yellow]No voice-enabled numbers found in your account.[/yellow]")
-        Prompt.ask("\nPress Enter to return")
+        print_panel("[yellow]No voice-enabled numbers found in your account.[/yellow]")
+        prompt_choice("\nPress Enter to return", choices=[""], default="")
         return
 
     # Select sender number
@@ -62,74 +65,76 @@ def handle_make_call_command():
     display_phone_numbers(active_numbers)
 
     max_index = len(active_numbers)
-    selection = Prompt.ask(
+    selection = prompt_choice(
         "\nSelect a number (0 to cancel)",
         choices=[str(i) for i in range(max_index + 1)]
     )
 
     if selection == "0":
-        console.print("[yellow]Call cancelled.[/yellow]")
+        print_panel("[yellow]Call cancelled.[/yellow]")
         return
 
     from_number = active_numbers[int(selection) - 1]['phoneNumber']
 
     # Get recipient number
-    console.print("\n[bold]Select recipient:[/bold]")
-    console.print("1. Enter phone number manually")
-    console.print("2. Select from recent contacts")
-    
-    recipient_choice = Prompt.ask("Choose an option", choices=["1", "2"])
+    print_panel("\n[bold]Select recipient:[/bold]")
+    recipient_choice = prompt_choice(
+        "Choose an option",
+        choices=["1", "2"],
+        default="1"
+    )
     
     if recipient_choice == "1":
-        to_number = Prompt.ask("Enter recipient phone number (e.g., +14155559876)")
+        to_number = prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
     else:
         recent_contacts = get_recent_contacts()
         if not recent_contacts:
-            console.print("[yellow]No recent contacts found.[/yellow]")
-            to_number = Prompt.ask("Enter recipient phone number (e.g., +14155559876)")
+            print_panel("[yellow]No recent contacts found.[/yellow]")
+            to_number = prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
         else:
             console.print("\n[bold]Select from recent contacts:[/bold]")
             display_recent_contacts(recent_contacts)
             
             contact_max = len(recent_contacts)
-            contact_selection = Prompt.ask(
+            contact_selection = prompt_choice(
                 "\nSelect a contact (0 to enter manually)",
                 choices=[str(i) for i in range(contact_max + 1)]
             )
             
             if contact_selection == "0":
-                to_number = Prompt.ask("Enter recipient phone number (e.g., +14155559876)")
+                to_number = prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
             else:
                 to_number = recent_contacts[int(contact_selection) - 1]['phoneNumber']
 
     # Get voice URL with default options
-    console.print("\n[bold]Select voice response:[/bold]")
-    console.print("1. Default greeting")
-    console.print("2. Custom TwiML URL")
-    
-    url_choice = Prompt.ask("Choose an option", choices=["1", "2"])
+    print_panel("\n[bold]Select voice response:[/bold]")
+    url_choice = prompt_choice(
+        "Choose an option",
+        choices=["1", "2"],
+        default="1"
+    )
     
     if url_choice == "1":
         voice_url = "https://handler.twilio.com/twiml/default-greeting"
     else:
-        voice_url = Prompt.ask("Enter TwiML URL")
+        voice_url = prompt_choice("Enter TwiML URL", choices=None)
 
     # Confirm and make call
-    console.print("\n[bold]Review call details:[/bold]")
+    print_panel("\n[bold]Review call details:[/bold]")
     console.print(f"From: [green]{from_number}[/green]")
     console.print(f"To: [cyan]{to_number}[/cyan]")
     console.print(f"Voice URL: [yellow]{voice_url}[/yellow]")
 
     confirm = Confirm.ask("\nPlace this call?")
     if not confirm:
-        console.print("[yellow]Call cancelled.[/yellow]")
+        print_panel("[yellow]Call cancelled.[/yellow]")
         return
 
     success = make_call(from_number, to_number, voice_url)
 
     if success:
-        console.print(f"[green]✅ Call initiated successfully![/green]")
+        print_panel("[green]✅ Call initiated successfully![/green]")
     else:
-        console.print(f"[red]❌ Failed to place the call.[/red]")
+        print_panel("[red]❌ Failed to place the call.[/red]")
 
-    Prompt.ask("\nPress Enter to return")
+    prompt_choice("\nPress Enter to return", choices=[""], default="")
