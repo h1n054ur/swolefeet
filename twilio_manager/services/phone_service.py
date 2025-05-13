@@ -160,6 +160,9 @@ class PhoneService:
         Returns:
             Tuple of (results list, status message)
         """
+        from twilio_manager.shared.utils.logger import get_logger
+        logger = get_logger(__name__)
+        
         # Validate country code and number type
         country = country.upper()
         type = type.lower()

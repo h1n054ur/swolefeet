@@ -98,5 +98,14 @@ class SearchMenu(BaseMenu):
             self.pause_and_return()
             return
 
+        # Show success message and results
+        self.clear()
+        self.print_title("Search Results", "📱")
         self.print_success(status)
-        SearchResultsMenu(results, status, parent=self).show()
+        
+        # Create and show results menu
+        results_menu = SearchResultsMenu(results, status, parent=self)
+        results_menu.show()
+        
+        # Return to parent menu after results menu is closed
+        self.return_to_parent()
