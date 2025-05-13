@@ -1,42 +1,22 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
-from twilio_manager.shared.ui.styling import (
-    console,
-    print_panel,
-    print_success,
-    print_error,
-    print_info,
-    prompt_choice,
-    STYLES,
-    create_table
+from twilio_manager.cli.commands.search_command import (
+    collect_search_parameters,
+    run_number_search,
+    display_search_results
 )
 
 class SearchMenu(BaseMenu):
     def show(self):
-        """Display the search menu."""
-        options = {
-            "1": "Search for available numbers",
-            "0": "Return to previous menu"
-        }
-        self.display("Search Phone Numbers", "🔍", options)
+        """Display the search menu and handle the search flow."""
+        # Get search parameters
+        params = collect_search_parameters()
+        if not params:
+            return
 
-    def handle_choice(self, choice):
-        """Handle the user's menu choice."""
-        if choice == "1":
-            from twilio_manager.cli.commands.search_command import (
-                collect_search_parameters,
-                run_number_search,
-                display_search_results
-            )
-            
-            # Get search parameters from user
-            params = collect_search_parameters()
-            if not params:
-                return
+        # Execute search
+        results, status = run_number_search(params)
+        if not results:
+            return
 
-            # Execute the search
-            results, status = run_number_search(params)
-            if not results:
-                return
-
-            # Display and handle results pagination
-            display_search_results(results, status)
+        # Display results with pagination
+        display_search_results(results, status)

@@ -1,8 +1,7 @@
 from twilio_manager.cli.menus.base_menu import BaseMenu
 from twilio_manager.shared.constants import MENU_TITLES
-from twilio_manager.cli.commands.send_message_command import handle_send_message_command
-from twilio_manager.cli.commands.view_logs_command import handle_view_message_logs_command
-# from cli.commands.delete_message_command import handle_delete_message_command  # Optional
+from twilio_manager.cli.menus.send_message_menu import SendMessageMenu
+from twilio_manager.cli.menus.view_message_logs_menu import ViewMessageLogsMenu
 
 class MessagingMenu(BaseMenu):
     def show(self):
@@ -11,7 +10,6 @@ class MessagingMenu(BaseMenu):
         self.display(title, emoji, {
             "1": "✉️ Send a Message",
             "2": "📄 View Message Logs",
-            # "3": "🗑 Delete a Message",  # Optional
             "0": "🔙 Back"
         })
 
@@ -22,8 +20,6 @@ class MessagingMenu(BaseMenu):
             choice (str): The user's selected option
         """
         if choice == "1":
-            handle_send_message_command()
+            SendMessageMenu().show()
         elif choice == "2":
-            handle_view_message_logs_command()
-        # elif choice == "3":
-        #     handle_delete_message_command()
+            ViewMessageLogsMenu().show()
