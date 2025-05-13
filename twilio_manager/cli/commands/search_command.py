@@ -14,11 +14,17 @@ def handle_search_command():
     console.print("\033[3J", end="")  # Clear scrollback buffer
     
     # Country selection
+    console.print(Panel.fit(
+        StyleConfig.format_menu_title("Search Available Numbers", "phone"),
+        title="Phone Menu"
+    ))
+    console.print()
+    
     console.print("[bold]Select country:[/bold]")
-    console.print("1. US/Canada (+1)")
-    console.print("2. UK (+44)")
-    console.print("3. Australia (+61)")
-    console.print("4. Other (specify country code)")
+    console.print(StyleConfig.format_menu_option("1", "US/Canada (+1)"))
+    console.print(StyleConfig.format_menu_option("2", "UK (+44)"))
+    console.print(StyleConfig.format_menu_option("3", "Australia (+61)"))
+    console.print(StyleConfig.format_menu_option("4", "Other (specify country code)"))
     
     country_choice = Prompt.ask("\nSelect country", choices=["1", "2", "3", "4"], default="1")
     country_codes = {
@@ -32,12 +38,21 @@ def handle_search_command():
         country_code = Prompt.ask("Enter country code (with +)")
 
     # Number type selection
-    console.print("\n[bold]Select number type:[/bold]")
-    console.print("1. Local")
-    console.print("2. Mobile")
-    console.print("3. Toll-Free")
+    console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
+    console.print("\033[3J", end="")  # Clear scrollback buffer
     
-    type_choice = Prompt.ask("Select type", choices=["1", "2", "3"], default="1")
+    console.print(Panel.fit(
+        StyleConfig.format_menu_title("Search Available Numbers", "phone"),
+        title="Phone Menu"
+    ))
+    console.print()
+    
+    console.print("[bold]Select number type:[/bold]")
+    console.print(StyleConfig.format_menu_option("1", "Local"))
+    console.print(StyleConfig.format_menu_option("2", "Mobile"))
+    console.print(StyleConfig.format_menu_option("3", "Toll-Free"))
+    
+    type_choice = Prompt.ask("\nSelect type", choices=["1", "2", "3"], default="1")
     number_types = {
         "1": "local",
         "2": "mobile",
@@ -46,13 +61,22 @@ def handle_search_command():
     number_type = number_types[type_choice]
 
     # Capabilities selection
-    console.print("\n[bold]Select capabilities:[/bold]")
-    console.print("1. Voice + SMS")
-    console.print("2. Voice only")
-    console.print("3. SMS only")
-    console.print("4. All (Voice + SMS + MMS)")
+    console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
+    console.print("\033[3J", end="")  # Clear scrollback buffer
     
-    caps_choice = Prompt.ask("Select capabilities", choices=["1", "2", "3", "4"], default="1")
+    console.print(Panel.fit(
+        StyleConfig.format_menu_title("Search Available Numbers", "phone"),
+        title="Phone Menu"
+    ))
+    console.print()
+    
+    console.print("[bold]Select capabilities:[/bold]")
+    console.print(StyleConfig.format_menu_option("1", "Voice + SMS"))
+    console.print(StyleConfig.format_menu_option("2", "Voice only"))
+    console.print(StyleConfig.format_menu_option("3", "SMS only"))
+    console.print(StyleConfig.format_menu_option("4", "All (Voice + SMS + MMS)"))
+    
+    caps_choice = Prompt.ask("\nSelect capabilities", choices=["1", "2", "3", "4"], default="1")
     capabilities_map = {
         "1": ["VOICE", "SMS"],
         "2": ["VOICE"],
@@ -62,11 +86,20 @@ def handle_search_command():
     capabilities = capabilities_map[caps_choice]
 
     # Optional pattern
-    console.print("\n[bold]Number pattern (optional):[/bold]")
-    console.print("1. No pattern")
-    console.print("2. Enter custom pattern")
+    console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
+    console.print("\033[3J", end="")  # Clear scrollback buffer
     
-    pattern_choice = Prompt.ask("Select option", choices=["1", "2"], default="1")
+    console.print(Panel.fit(
+        StyleConfig.format_menu_title("Search Available Numbers", "phone"),
+        title="Phone Menu"
+    ))
+    console.print()
+    
+    console.print("[bold]Number pattern (optional):[/bold]")
+    console.print(StyleConfig.format_menu_option("1", "No pattern"))
+    console.print(StyleConfig.format_menu_option("2", "Enter custom pattern"))
+    
+    pattern_choice = Prompt.ask("\nSelect option", choices=["1", "2"], default="1")
     pattern = "" if pattern_choice == "1" else Prompt.ask("Enter pattern (e.g., 555)")
 
     console.print("\n[bold yellow]Searching...[/bold yellow]")
@@ -130,6 +163,13 @@ def handle_search_command():
         console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
         console.print("\033[3J", end="")  # Clear scrollback buffer
         
+        # Show menu header
+        console.print(Panel.fit(
+            StyleConfig.format_menu_title("Search Results", "phone"),
+            title="Phone Menu"
+        ))
+        console.print()
+        
         start_idx = (page_num - 1) * 50
         end_idx = min(start_idx + 50, len(results))
         total_pages = (len(results) + 49) // 50  # Round up division
@@ -182,12 +222,12 @@ def handle_search_command():
         
         # Show navigation and purchase options
         console.print("\n[bold]Options:[/bold]")
-        console.print("0. Return to menu")
+        console.print(StyleConfig.format_menu_option("0", "Return to menu", "back"))
         if total_pages > 1:
             if current_page > 1:
-                console.print("P/p. Previous page")
+                console.print(StyleConfig.format_menu_option("P", "Previous page"))
             if current_page < total_pages:
-                console.print("N/n. Next page")
+                console.print(StyleConfig.format_menu_option("N", "Next page"))
         console.print("\nEnter a number from the list above to purchase")
         
         # Build choices list
