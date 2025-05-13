@@ -15,15 +15,25 @@ from twilio_manager.shared.ui.styling import (
 from twilio_manager.core.phone_numbers import search_available_numbers
 
 class SearchMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize search menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
+
     def show(self):
         """Display search menu and handle the search flow."""
         # Get search parameters
-        params = SearchParametersMenu().show()
+        params = SearchParametersMenu(parent=self).show()
         if not params:
+            self.return_to_parent()
             return
 
         # Show search criteria
-        print_info("Searching...")
+        self.clear()
+        self.print_title("Search Criteria", "🔍")
         print_panel("Search criteria:", style='highlight')
         console.print("Country:", style=STYLES['dim'])
         console.print(params['country_code'], style=STYLES['info'])
@@ -60,25 +70,27 @@ class SearchMenu(BaseMenu):
 
         # Show search status
         if status.startswith("Error"):
-            print_error(f"Search error: {status}")
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+            self.print_error(f"Search error: {status}")
+            self.pause_and_return()
             return
 
         if not results:
+            self.clear()
+            self.print_title("No Results", "❌")
             print_panel("No matching numbers found.", style='error')
-            print_info("\nPossible reasons:")
+            self.print_info("\nPossible reasons:")
             console.print("• No numbers available in the selected region", style=STYLES['data'])
             console.print("• No numbers match the selected capabilities", style=STYLES['data'])
             console.print("• Pattern too restrictive", style=STYLES['data'])
             console.print("• Service not available in the selected region", style=STYLES['data'])
             
-            print_info("\nTry:")
+            self.print_info("\nTry:")
             console.print("• Different region", style=STYLES['data'])
             console.print("• Fewer capabilities", style=STYLES['data'])
             console.print("• Remove pattern", style=STYLES['data'])
             
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+            self.pause_and_return()
             return
 
-        print_success(status)
-        SearchResultsMenu(results, status).show()
+        self.print_success(status)
+        SearchResultsMenu(results, status, parent=self).show()

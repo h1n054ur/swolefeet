@@ -191,8 +191,6 @@ class PhoneService:
             max_retries = 3
             retry_count = 0
             
-            print("\nStarting search for numbers...")
-            
             while len(results) < 500 and consecutive_no_unique < 2:
                 try:
                     # Make request with basic auth
@@ -210,7 +208,6 @@ class PhoneService:
                     
                     # Process numbers from response
                     numbers = data.get('available_phone_numbers', [])
-                    print(f"Found {len(numbers)} numbers in response")
                     
                     for number in numbers:
                         phone_number = number.get('phone_number')
@@ -230,12 +227,9 @@ class PhoneService:
                     if progress_callback:
                         progress_callback(len(results))
                     
-                    print(f"Added {new_unique} unique numbers (Total: {len(results)})")
-                    
                     # Check if we found new unique numbers
                     if new_unique == 0:
                         consecutive_no_unique += 1
-                        print(f"No new unique numbers found. Attempt {consecutive_no_unique}/2")
                     else:
                         consecutive_no_unique = 0
                     

@@ -8,6 +8,14 @@ from twilio_manager.shared.ui.styling import (
 from twilio_manager.shared.constants import MENU_TITLES
 
 class BaseMenu:
+    def __init__(self, parent=None):
+        """Initialize a menu with optional parent menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        self.parent = parent
+
     def show(self):
         """Display the menu and handle user interaction.
         
@@ -30,6 +38,7 @@ class BaseMenu:
                 console.print(f"[bold magenta]{key}.[/bold magenta] {desc}")
             choice = self.get_choice(list(options.keys()))
             if choice == "0":
+                self.return_to_parent()
                 break
             self.handle_choice(choice)
 
@@ -43,6 +52,34 @@ class BaseMenu:
             NotImplementedError: If not implemented by subclass
         """
         raise NotImplementedError("Override this method in subclasses")
+
+    def return_to_parent(self):
+        """Return to the parent menu or main menu."""
+        from twilio_manager.cli.menus.main_menu import MainMenu
+        if self.parent:
+            self.parent.show()
+        else:
+            MainMenu().show()
+
+    def pause_and_return(self, message=None):
+        """Display a message, pause for user input, and return to parent menu.
+        
+        Args:
+            message (str, optional): Message to display before pausing
+        """
+        if message:
+            self.print_info(message)
+        input("\nPress Enter to return...")
+        self.return_to_parent()
+
+    def handle_empty_result(self, message="No results found."):
+        """Handle empty result sets consistently.
+        
+        Args:
+            message (str, optional): Message to display
+        """
+        self.print_warning(message)
+        self.pause_and_return()
 
     def clear(self):
         """Clear the screen."""

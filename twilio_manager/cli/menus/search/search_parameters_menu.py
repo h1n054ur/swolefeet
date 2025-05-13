@@ -7,16 +7,27 @@ from twilio_manager.shared.ui.styling import (
 )
 
 class SearchParametersMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize search parameters menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
+
     def show(self):
         """Collect search parameters from user input."""
+        self.clear()
+        self.print_title("Search Parameters", "🔍")
+
         # Country selection
-        print_panel("Select country:", style='highlight')
-        console.print("1. US/Canada (+1)", style=STYLES['data'])
-        console.print("2. UK (+44)", style=STYLES['data'])
-        console.print("3. Australia (+61)", style=STYLES['data'])
-        console.print("4. Other (specify country code)", style=STYLES['data'])
+        self.print_info("Select country:")
+        self.print_option("1", "US/Canada (+1)")
+        self.print_option("2", "UK (+44)")
+        self.print_option("3", "Australia (+61)")
+        self.print_option("4", "Other (specify country code)")
         
-        country_choice = prompt_choice("Select country", choices=["1", "2", "3", "4"], default="1")
+        country_choice = self.get_choice(["1", "2", "3", "4"], "Select country", "1")
         country_codes = {
             "1": "+1",
             "2": "+44",
@@ -25,15 +36,17 @@ class SearchParametersMenu(BaseMenu):
         
         country_code = country_codes.get(country_choice)
         if country_choice == "4":
-            country_code = prompt_choice("Enter country code (with +)", choices=None)
+            country_code = self.get_choice(None, "Enter country code (with +)")
 
         # Number type selection
-        print_panel("Select number type:", style='highlight')
-        console.print("1. Local", style=STYLES['data'])
-        console.print("2. Mobile", style=STYLES['data'])
-        console.print("3. Toll-Free", style=STYLES['data'])
+        self.clear()
+        self.print_title("Number Type", "📱")
+        self.print_info("Select number type:")
+        self.print_option("1", "Local")
+        self.print_option("2", "Mobile")
+        self.print_option("3", "Toll-Free")
         
-        type_choice = prompt_choice("Select type", choices=["1", "2", "3"], default="1")
+        type_choice = self.get_choice(["1", "2", "3"], "Select type", "1")
         number_types = {
             "1": "local",
             "2": "mobile",
@@ -42,13 +55,15 @@ class SearchParametersMenu(BaseMenu):
         number_type = number_types[type_choice]
 
         # Capabilities selection
-        print_panel("Select capabilities:", style='highlight')
-        console.print("1. Voice + SMS", style=STYLES['data'])
-        console.print("2. Voice only", style=STYLES['data'])
-        console.print("3. SMS only", style=STYLES['data'])
-        console.print("4. All (Voice + SMS + MMS)", style=STYLES['data'])
+        self.clear()
+        self.print_title("Capabilities", "⚡")
+        self.print_info("Select capabilities:")
+        self.print_option("1", "Voice + SMS")
+        self.print_option("2", "Voice only")
+        self.print_option("3", "SMS only")
+        self.print_option("4", "All (Voice + SMS + MMS)")
         
-        caps_choice = prompt_choice("Select capabilities", choices=["1", "2", "3", "4"], default="1")
+        caps_choice = self.get_choice(["1", "2", "3", "4"], "Select capabilities", "1")
         capabilities_map = {
             "1": ["VOICE", "SMS"],
             "2": ["VOICE"],
@@ -58,12 +73,14 @@ class SearchParametersMenu(BaseMenu):
         capabilities = capabilities_map[caps_choice]
 
         # Optional pattern
-        print_panel("Number pattern (optional):", style='highlight')
-        console.print("1. No pattern", style=STYLES['data'])
-        console.print("2. Enter custom pattern", style=STYLES['data'])
+        self.clear()
+        self.print_title("Number Pattern", "🔢")
+        self.print_info("Number pattern (optional):")
+        self.print_option("1", "No pattern")
+        self.print_option("2", "Enter custom pattern")
         
-        pattern_choice = prompt_choice("Select option", choices=["1", "2"], default="1")
-        pattern = "" if pattern_choice == "1" else prompt_choice("Enter pattern (e.g., 555)", choices=None)
+        pattern_choice = self.get_choice(["1", "2"], "Select option", "1")
+        pattern = "" if pattern_choice == "1" else self.get_choice(None, "Enter pattern (e.g., 555)")
 
         return {
             'country_code': country_code,
