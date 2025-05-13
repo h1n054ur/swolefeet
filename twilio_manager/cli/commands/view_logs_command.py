@@ -55,17 +55,29 @@ def handle_view_message_logs_command():
     ViewMessageLogsMenu().show()
 
 
-def handle_view_call_logs_command():
-    """Display call logs."""
+def format_call_log_entry(log):
+    """Format a single call log entry.
+    
+    Args:
+        log (dict): Call log entry
+        
+    Returns:
+        list: Formatted row values
+    """
+    return [
+        log.get("from", "—"),
+        log.get("to", "—"),
+        log.get("status", "—"),
+        str(log.get("duration", "0")),
+        log.get("start_time", "—")
+    ]
 
-
-    logs = get_call_logs()
-
-    if not logs:
-        print_error("No call logs found.")
-        prompt_choice("\nPress Enter to return", choices=[""], default="")
-        return
-
+def display_call_logs(logs):
+    """Display call logs in a table.
+    
+    Args:
+        logs (list): List of call log entries
+    """
     table = create_table(
         columns=["From", "To", "Status", "Duration", "Start Time"],
         title="Call Logs"
@@ -73,13 +85,14 @@ def handle_view_call_logs_command():
 
     for log in logs:
         table.add_row(
-            log.get("from", "—"),
-            log.get("to", "—"),
-            log.get("status", "—"),
-            str(log.get("duration", "0")),
-            log.get("start_time", "—"),
+            *format_call_log_entry(log),
             style=STYLES['data']
         )
 
     console.print(table)
     prompt_choice("\nPress Enter to return", choices=[""], default="")
+
+def handle_view_call_logs_command():
+    """Display call logs."""
+    from twilio_manager.cli.menus.view_call_logs_menu import ViewCallLogsMenu
+    ViewCallLogsMenu().show()
