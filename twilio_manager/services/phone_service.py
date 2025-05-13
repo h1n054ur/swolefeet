@@ -137,6 +137,14 @@ class PhoneService:
         results, _ = self._search_available_numbers_api(country_code, number_type, capabilities, pattern)
         return results
 
+    # Valid country codes and their supported number types
+    SUPPORTED_COUNTRIES = {
+        "US": ["local", "tollfree", "mobile"],
+        "GB": ["local", "tollfree", "mobile"],
+        "CA": ["local", "tollfree"],
+        "AU": ["local", "tollfree", "mobile"]
+    }
+
     def _search_available_numbers_api(self, country: str, type: str, capabilities: List[str], contains: str = "", 
                                progress_callback=None) -> Tuple[List[Dict], str]:
         """
@@ -152,6 +160,15 @@ class PhoneService:
         Returns:
             Tuple of (results list, status message)
         """
+        # Validate country code and number type
+        country = country.upper()
+        type = type.lower()
+        
+        if country not in self.SUPPORTED_COUNTRIES:
+            return [], f"Unsupported country code: {country}"
+            
+        if type not in self.SUPPORTED_COUNTRIES[country]:
+            return [], f"Number type '{type}' not supported for country {country}"
         try:
             # Map number types to API endpoints
             type_map = {
@@ -170,19 +187,38 @@ class PhoneService:
             # Set up initial parameters with capability filters
             params = {}
             if capabilities:
-                if "SMS" in capabilities:
-                    params["SmsEnabled"] = "true"
-                if "VOICE" in capabilities:
-                    params["VoiceEnabled"] = "true"
-                if "MMS" in capabilities:
-                    params["MmsEnabled"] = "true"
+                # Convert capabilities to uppercase and handle variations
+                caps = [cap.upper().strip() for cap in capabilities]
+                capability_map = {
+                    "SMS": "SmsEnabled",
+                    "VOICE": "VoiceEnabled",
+                    "MMS": "MmsEnabled",
+                    "MESSAGING": "SmsEnabled",  # Handle alternative names
+                    "CALL": "VoiceEnabled",
+                    "TEXT": "SmsEnabled"
+                }
+                for cap in caps:
+                    if cap in capability_map:
+                        params[capability_map[cap]] = "true"
                     
             # Add pattern if provided
             if contains:
-                if country == "US" and contains.isdigit() and len(contains) == 3:
-                    params["AreaCode"] = contains
+                contains = contains.strip()
+                # Handle US area codes (3 digits)
+                if country == "US" and contains.isdigit():
+                    if len(contains) == 3:
+                        params["AreaCode"] = contains
+                    elif len(contains) > 3:
+                        # If more than 3 digits, use Contains for full number search
+                        params["Contains"] = contains
+                    else:
+                        # For 1-2 digits, search in both area code and number
+                        params["Contains"] = contains
                 else:
+                    # For non-US or non-digit patterns
                     params["Contains"] = contains
+                
+                logger.debug(f"Pattern parameters: {params}")
 
             # Initialize tracking variables
             results = []
@@ -193,6 +229,12 @@ class PhoneService:
             
             while len(results) < 500 and consecutive_no_unique < 2:
                 try:
+                    # Log request parameters
+                    from twilio_manager.shared.utils.logger import get_logger
+                    logger = get_logger(__name__)
+                    logger.debug(f"Searching numbers with params: {params}")
+                    logger.debug(f"Request URL: {base_url}")
+                    
                     # Make request with basic auth
                     response = requests.get(
                         base_url,
@@ -200,6 +242,11 @@ class PhoneService:
                         params=params,
                         timeout=30
                     )
+                    
+                    # Log response status and content
+                    logger.debug(f"Response status: {response.status_code}")
+                    logger.debug(f"Response content: {response.text[:500]}...")  # Log first 500 chars
+                    
                     response.raise_for_status()
                     
                     # Parse response
