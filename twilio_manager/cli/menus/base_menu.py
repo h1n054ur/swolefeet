@@ -54,8 +54,9 @@ class BaseMenu:
     
     def clear_screen(self) -> None:
         """Clear the screen properly."""
-        console.clear()
-        console.print("\033[2J\033[H", end="")  # ANSI escape codes for full screen clear
+        # Use only ANSI escape codes for more reliable clearing
+        console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
+        console.print("\033[3J", end="")  # Clear scrollback buffer
 
     def render_menu(self) -> None:
         """Render the menu with consistent styling."""
@@ -87,20 +88,33 @@ class BaseMenu:
         for option in self.options:
             if option["key"] == choice:
                 try:
-                    self.clear_screen()  # Clear screen before executing handler
+                    # Clear screen and show menu header
+                    self.clear_screen()
                     console.print(Panel.fit(
                         StyleConfig.format_menu_title(self.title, self.menu_type),
                         title=self.menu_type
                     ))
                     console.print()  # Add spacing
+                    
+                    # Execute handler
                     result = option["handler"]()
+                    
+                    # Handle result
                     if result is False:  # Only exit if explicitly False
+                        self.clear_screen()  # Clear screen before exiting
                         return False
+                    
+                    # If handler didn't clear screen, wait for user input
+                    if not isinstance(result, bool):
+                        console.input("\nPress Enter to continue...")
+                        self.clear_screen()
+                    
                     return True
                 except Exception as e:
-                    console.clear()
+                    self.clear_screen()
                     console.print(f"[error]Error: {str(e)}[/error]")
                     console.input("\nPress Enter to continue...")
+                    self.clear_screen()
                     return True
         return True
     

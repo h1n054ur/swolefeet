@@ -9,6 +9,10 @@ from twilio_manager.core.phone_numbers import search_available_numbers
 console = Console()
 
 def handle_search_command():
+    # Use ANSI codes to clear screen and move cursor
+    console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
+    console.print("\033[3J", end="")  # Clear scrollback buffer
+    
     # Country selection
     console.print("[bold]Select country:[/bold]")
     console.print("1. US/Canada (+1)")
@@ -16,7 +20,7 @@ def handle_search_command():
     console.print("3. Australia (+61)")
     console.print("4. Other (specify country code)")
     
-    country_choice = Prompt.ask("Select country", choices=["1", "2", "3", "4"], default="1")
+    country_choice = Prompt.ask("\nSelect country", choices=["1", "2", "3", "4"], default="1")
     country_codes = {
         "1": "+1",
         "2": "+44",
@@ -122,6 +126,10 @@ def handle_search_command():
     console.print(f"\n[bold green]{status}[/bold green]")
     
     def display_results_page(page_num: int) -> int:
+        # Clear screen and reset cursor
+        console.print("\033[2J\033[H", end="")  # Clear screen and move cursor to home
+        console.print("\033[3J", end="")  # Clear scrollback buffer
+        
         start_idx = (page_num - 1) * 50
         end_idx = min(start_idx + 50, len(results))
         total_pages = (len(results) + 49) // 50  # Round up division
