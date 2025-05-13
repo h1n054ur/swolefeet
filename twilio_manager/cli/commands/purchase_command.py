@@ -29,31 +29,12 @@ def display_number_options(numbers):
         )
     console.print(table)
 
-def handle_purchase_command(pre_selected_number=None):
-    """Handle the purchase of a phone number.
+def collect_purchase_parameters():
+    """Collect parameters for purchasing a number.
     
-    Args:
-        pre_selected_number (str, optional): Phone number to purchase directly
+    Returns:
+        dict: Search parameters or None if cancelled
     """
-
-
-    if pre_selected_number:
-        # If number is pre-selected (e.g., from search), confirm and purchase
-        if not confirm_action(f"Are you sure you want to purchase {pre_selected_number}?"):
-            print_warning("Purchase cancelled.")
-            return
-
-        success = purchase_number(pre_selected_number)
-
-        if success:
-            print_success(f"Number {pre_selected_number} purchased successfully!")
-        else:
-            print_error(f"Failed to purchase number {pre_selected_number}.")
-
-        prompt_choice("\nPress Enter to return", choices=[""], default="")
-        return
-
-    # If no pre-selected number, show search interface
     print_panel("Search for available numbers:", style='highlight')
     console.print("1. US/Canada (+1)", style=STYLES['data'])
     console.print("2. UK (+44)", style=STYLES['data'])
@@ -71,38 +52,62 @@ def handle_purchase_command(pre_selected_number=None):
     if country_choice == "4":
         country_code = prompt_choice("Enter country code (with +)", choices=None)
 
-    # Search for available numbers
-    available_numbers = search_available_numbers(country_code)
+    return {'country_code': country_code}
+
+def search_and_display_numbers(params):
+    """Search for available numbers and display them.
+    
+    Args:
+        params (dict): Search parameters
+        
+    Returns:
+        list: Available numbers or None if none found
+    """
+    available_numbers = search_available_numbers(params['country_code'])
     
     if not available_numbers:
         print_error("No numbers available in the selected region.")
         prompt_choice("\nPress Enter to return", choices=[""], default="")
-        return
+        return None
 
     print_panel("Available Numbers:", style='highlight')
     display_number_options(available_numbers)
+    return available_numbers
 
-    # Let user select a number by index
-    max_index = len(available_numbers)
-    selection = prompt_choice(
-        "\nSelect a number to purchase (0 to cancel)",
-        choices=[str(i) for i in range(max_index + 1)]
-    )
-
-    if selection == "0":
+def confirm_purchase_choice(phone_number):
+    """Confirm purchase with the user.
+    
+    Args:
+        phone_number (str): Phone number to purchase
+        
+    Returns:
+        bool: True if confirmed, False if cancelled
+    """
+    if not confirm_action(f"Are you sure you want to purchase {phone_number}?"):
         print_warning("Purchase cancelled.")
-        return
+        return False
+    return True
 
-    selected_number = available_numbers[int(selection) - 1]['phoneNumber']
-    if not confirm_action(f"Are you sure you want to purchase {selected_number}?"):
-        print_warning("Purchase cancelled.")
-        return
-
-    success = purchase_number(selected_number)
+def execute_number_purchase(phone_number):
+    """Execute the purchase of a phone number.
+    
+    Args:
+        phone_number (str): Phone number to purchase
+    """
+    success = purchase_number(phone_number)
 
     if success:
-        print_success(f"Number {selected_number} purchased successfully!")
+        print_success(f"Number {phone_number} purchased successfully!")
     else:
-        print_error(f"Failed to purchase number {selected_number}.")
+        print_error(f"Failed to purchase number {phone_number}.")
 
     prompt_choice("\nPress Enter to return", choices=[""], default="")
+
+def handle_purchase_command(pre_selected_number=None):
+    """Handle the purchase of a phone number.
+    
+    Args:
+        pre_selected_number (str, optional): Phone number to purchase directly
+    """
+    from twilio_manager.cli.menus.purchase_menu import PurchaseMenu
+    PurchaseMenu(pre_selected_number).show()
