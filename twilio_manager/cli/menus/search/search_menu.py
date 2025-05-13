@@ -71,6 +71,12 @@ class SearchMenu(BaseMenu):
         # Show search status
         if status.startswith("Error"):
             self.print_error(f"Search error: {status}")
+            self.print_info("\nDebug Information:")
+            console.print(f"Country: {params['country_code']}", style=STYLES['data'])
+            console.print(f"Type: {params['number_type']}", style=STYLES['data'])
+            console.print(f"Capabilities: {', '.join(params['capabilities'])}", style=STYLES['data'])
+            if params['pattern']:
+                console.print(f"Pattern: {params['pattern']}", style=STYLES['data'])
             self.pause_and_return()
             return
 

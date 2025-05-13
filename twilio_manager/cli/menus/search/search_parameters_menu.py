@@ -27,16 +27,23 @@ class SearchParametersMenu(BaseMenu):
         self.print_option("3", "Australia (+61)")
         self.print_option("4", "Other (specify country code)")
         
+        from twilio_manager.shared.utils.logger import get_logger
+        logger = get_logger(__name__)
+        
         country_choice = self.get_choice(["1", "2", "3", "4"], "Select country", "1")
         country_codes = {
-            "1": "+1",
-            "2": "+44",
-            "3": "+61"
+            "1": "US",  # US/Canada
+            "2": "GB",  # UK
+            "3": "AU"   # Australia
         }
         
         country_code = country_codes.get(country_choice)
         if country_choice == "4":
-            country_code = self.get_choice(None, "Enter country code (with +)")
+            # For custom country code, accept with or without +
+            custom_code = self.get_choice(None, "Enter country code (e.g., US, GB)")
+            country_code = custom_code.strip().lstrip('+').upper()
+            
+        logger.debug(f"Selected country code: {country_code}")
 
         # Number type selection
         self.clear()
