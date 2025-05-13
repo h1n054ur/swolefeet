@@ -9,11 +9,8 @@ from twilio_manager.core.phone_numbers import search_available_numbers
 console = Console()
 
 def handle_search_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🔍 Search Available Numbers[/bold cyan]"))
-
     # Country selection
-    console.print("\n[bold]Select country:[/bold]")
+    console.print("[bold]Select country:[/bold]")
     console.print("1. US/Canada (+1)")
     console.print("2. UK (+44)")
     console.print("3. Australia (+61)")
@@ -210,12 +207,8 @@ def handle_search_command():
             break
         elif selection.upper() == "P" and current_page > 1:
             current_page -= 1
-            console.clear()
-            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
         elif selection.upper() == "N" and current_page < total_pages:
             current_page += 1
-            console.clear()
-            console.print(Panel.fit("[bold cyan]🔍 Search Results[/bold cyan]"))
         elif selection.isdigit():
             # Handle purchase
             selected_idx = int(selection) - 1

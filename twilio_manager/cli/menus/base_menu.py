@@ -88,6 +88,11 @@ class BaseMenu:
             if option["key"] == choice:
                 try:
                     self.clear_screen()  # Clear screen before executing handler
+                    console.print(Panel.fit(
+                        StyleConfig.format_menu_title(self.title, self.menu_type),
+                        title=self.menu_type
+                    ))
+                    console.print()  # Add spacing
                     result = option["handler"]()
                     if result is False:  # Only exit if explicitly False
                         return False
