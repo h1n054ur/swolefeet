@@ -16,8 +16,19 @@ from twilio_manager.cli.commands.view_logs_command import (
 )
 
 class ViewMessageLogsMenu(BaseMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.page_size = 10
+        self.current_page = 1
+        self.total_pages = 1
+        self.formatted_logs = []
+
     def show(self):
         """Display message logs with pagination."""
+        # Clear screen and show title
+        console.clear()
+        print_panel("Message Logs", style='highlight')
+
         # Get logs
         logs, error = get_message_logs_list()
         if error:
@@ -31,24 +42,26 @@ class ViewMessageLogsMenu(BaseMenu):
             return
 
         # Format logs
-        formatted_logs = []
+        self.formatted_logs = []
+        skipped = 0
         for log in logs:
             if isinstance(log, dict):  # Ensure log is a dictionary
-                formatted_logs.append(format_message_log_entry(log))
+                self.formatted_logs.append(format_message_log_entry(log))
             else:
-                self.print_warning(f"Skipping malformed log entry: {log}")
+                skipped += 1
                 continue
 
-        if not formatted_logs:
+        if skipped > 0:
+            self.print_warning(f"Skipped {skipped} malformed log entries")
+
+        if not self.formatted_logs:
             self.print_warning("No valid message logs to display.")
             self.pause_and_return()
             return
 
         # Initialize pagination
-        self.page_size = 10
         self.current_page = 1
-        self.total_pages = (len(formatted_logs) + self.page_size - 1) // self.page_size
-        self.formatted_logs = formatted_logs
+        self.total_pages = (len(self.formatted_logs) + self.page_size - 1) // self.page_size
 
         # Show first page
         self._show_current_page()
@@ -60,10 +73,13 @@ class ViewMessageLogsMenu(BaseMenu):
         end_idx = min(start_idx + self.page_size, len(self.formatted_logs))
         page_logs = self.formatted_logs[start_idx:end_idx]
 
+        # Show title
+        print_panel(f"Message Logs (Page {self.current_page}/{self.total_pages})", style='highlight')
+
         # Create and display table
         table = create_table(
             columns=["From", "To", "Body", "Status", "Date"],
-            title=f"Message Logs (Page {self.current_page}/{self.total_pages})"
+            title=None  # Remove title since we're showing it in panel
         )
 
         for log in page_logs:
@@ -76,8 +92,8 @@ class ViewMessageLogsMenu(BaseMenu):
                 style=STYLES['data']
             )
 
-        console.print("\n")
         console.print(table)
+        console.print("")  # Add spacing
 
         # Show navigation options
         options = {"0": "Return to menu"}
@@ -87,20 +103,30 @@ class ViewMessageLogsMenu(BaseMenu):
             if self.current_page < self.total_pages:
                 options["N"] = "Next page"
 
-        self.display(
-            title="Message Logs Navigation",
-            emoji="📜",
-            options=options
+        # Show options without using display() to avoid clearing screen
+        print_panel("Navigation Options:", style='highlight')
+        for key, value in options.items():
+            console.print(f"{key}. {value}", style=STYLES['data'])
+        console.print("")
+
+        # Get user choice
+        choice = prompt_choice(
+            "Select an option",
+            choices=list(options.keys()),
+            default="0"
         )
+
+        # Handle the choice
+        self.handle_choice(choice)
 
     def handle_choice(self, choice):
         """Handle navigation choice."""
         choice = choice.upper()
-        if choice == "P" and self.current_page > 1:
+        if choice == "0":
+            return  # Return to parent menu
+        elif choice == "P" and self.current_page > 1:
             self.current_page -= 1
             self._show_current_page()
         elif choice == "N" and self.current_page < self.total_pages:
             self.current_page += 1
             self._show_current_page()
-        else:
-            self.return_to_parent()
