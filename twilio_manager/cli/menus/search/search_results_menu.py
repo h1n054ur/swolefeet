@@ -24,6 +24,8 @@ class SearchResultsMenu(BaseMenu):
         super().__init__(parent)
         self.results = results
         self.status = status
+        self.current_page = 1
+        self.total_pages = (len(results) + 49) // 50 if results else 0  # Round up division
 
     def show(self):
         """Display search results with pagination."""
@@ -31,61 +33,66 @@ class SearchResultsMenu(BaseMenu):
             self.handle_empty_result("No phone numbers found matching your criteria.")
             return
 
-        current_page = 1
-        while True:
-            self.clear()
-            self.print_title("Search Results", "📱")
-            total_pages = self._display_results_page(current_page)
+        self._show_current_page()
+        return None
+
+    def _show_current_page(self):
+        """Show the current page of results."""
+        total_pages = self._display_results_page(self.current_page)
+        
+        options = {"0": "Return to menu"}
+        
+        # Add navigation options
+        if total_pages > 1:
+            if self.current_page > 1:
+                options["P"] = "Previous page"
+            if self.current_page < total_pages:
+                options["N"] = "Next page"
+        
+        # Add purchase options (hidden from display but valid choices)
+        start_idx = (self.current_page - 1) * 50
+        end_idx = min(start_idx + 50, len(self.results))
+        for i in range(start_idx + 1, end_idx + 1):
+            options[str(i)] = ""  # Hidden option
             
-            # Show navigation and purchase options
-            self.print_info("\nOptions:")
-            self.print_option("0", "Return to menu")
-            if total_pages > 1:
-                if current_page > 1:
-                    self.print_option("P", "Previous page")
-                if current_page < total_pages:
-                    self.print_option("N", "Next page")
-            self.print_info("\nEnter a number from the list above to purchase")
-            
-            # Build choices list
-            choices = ["0"]
-            if total_pages > 1:
-                if current_page > 1:
-                    choices.extend(["P", "p"])
-                if current_page < total_pages:
-                    choices.extend(["N", "n"])
-            
-            # Add number choices for current page but don't show them in prompt
-            start_idx = (current_page - 1) * 50
-            end_idx = min(start_idx + 50, len(self.results))
-            valid_numbers = [str(i) for i in range(start_idx + 1, end_idx + 1)]
-            choices.extend(valid_numbers)
-            
-            selection = self.get_choice(
-                choices,
-                "Select an option",
-                "0"
-            )
-            
-            if selection == "0":
-                self.return_to_parent()
-                return
-            elif selection.upper() == "P" and current_page > 1:
-                current_page -= 1
-            elif selection.upper() == "N" and current_page < total_pages:
-                current_page += 1
-            elif selection.isdigit():
-                # Handle purchase
-                selected_idx = int(selection) - 1
-                from twilio_manager.cli.commands.purchase_command import handle_purchase_command
-                success, error = handle_purchase_command(self.results[selected_idx]['phoneNumber'])
-                if success:
-                    self.pause_and_return("Phone number purchased successfully!")
-                else:
-                    self.print_error(f"Failed to purchase number: {error}")
-                    self.pause_and_return()
-                self.return_to_parent()
-                return
+        self.display(
+            title=f"Search Results (Page {self.current_page}/{total_pages})",
+            emoji="📱",
+            options=options
+        )
+
+    def handle_choice(self, choice):
+        """Handle menu selection."""
+        choice = choice.upper()
+        
+        if choice == "P" and self.current_page > 1:
+            self.current_page -= 1
+            self._show_current_page()
+        elif choice == "N" and self.current_page < self.total_pages:
+            self.current_page += 1
+            self._show_current_page()
+        elif choice.isdigit():
+            selected_idx = int(choice) - 1
+            if 0 <= selected_idx < len(self.results):
+                self._handle_purchase(selected_idx)
+            else:
+                self.print_error("Invalid selection")
+                self.pause_and_return()
+
+    def _handle_purchase(self, selected_idx):
+        """Handle phone number purchase."""
+        from twilio_manager.cli.commands.purchase_command import handle_purchase_command
+        number = self.results[selected_idx]['phoneNumber']
+        
+        self.print_info(f"\nAttempting to purchase {number}...")
+        success, error = handle_purchase_command(number)
+        
+        if success:
+            self.print_success("Phone number purchased successfully!")
+            self.pause_and_return()
+        else:
+            self.print_error(f"Failed to purchase number: {error}")
+            self.pause_and_return()
 
     def _display_results_page(self, page_num: int) -> int:
         """Display a page of search results.
