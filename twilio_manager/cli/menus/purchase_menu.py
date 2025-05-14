@@ -116,6 +116,9 @@ class PurchaseMenu(BaseMenu):
 
     def show(self):
         """Display the purchase menu and handle purchase flow."""
+        self.clear()
+        self.print_title("Purchase Numbers", "📱")
+        
         if self.pre_selected_number:
             # Direct purchase flow
             PurchaseConfirmationMenu(self.pre_selected_number).show()

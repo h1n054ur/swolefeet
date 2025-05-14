@@ -19,15 +19,18 @@ from twilio_manager.cli.commands.release_command import (
 class ReleaseMenu(BaseMenu):
     def show(self):
         """Display the release menu and handle release flow."""
+        self.clear()
+        self.print_title("Release Numbers", "📱")
+
         # Get active numbers
         active_numbers = get_active_numbers_list()
         if not active_numbers:
-            print_warning("No active numbers found in your account.")
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+            self.print_warning("No active numbers found in your account.")
+            self.get_choice([""], "\nPress Enter to return", "")
             return
 
         # Display active numbers
-        print_panel("Active Numbers:", style='highlight')
+        self.print_panel("Active Numbers:", style='highlight')
         table = create_table(columns=["#", "Phone Number", "Friendly Name", "SID"])
         for idx, number in enumerate(active_numbers, 1):
             table.add_row(
@@ -41,13 +44,13 @@ class ReleaseMenu(BaseMenu):
 
         # Let user select a number
         max_index = len(active_numbers)
-        selection = prompt_choice(
-            "\nSelect a number to release (0 to cancel)",
-            choices=[str(i) for i in range(max_index + 1)]
+        selection = self.get_choice(
+            [str(i) for i in range(max_index + 1)],
+            "\nSelect a number to release (0 to cancel)"
         )
 
         if selection == "0":
-            print_warning("Release cancelled.")
+            self.print_warning("Release cancelled.")
             return
 
         # Get selected number
@@ -59,15 +62,15 @@ class ReleaseMenu(BaseMenu):
             "This action is irreversible.",
             style='error'
         ):
-            print_warning("Release cancelled.")
+            self.print_warning("Release cancelled.")
             return
 
         # Execute release
         success = release_phone_number(selected_number['sid'])
 
         if success:
-            print_success(f"Number {selected_number['phoneNumber']} released successfully.")
+            self.print_success(f"Number {selected_number['phoneNumber']} released successfully.")
         else:
-            print_error(f"Failed to release number {selected_number['phoneNumber']}.")
+            self.print_error(f"Failed to release number {selected_number['phoneNumber']}.")
 
-        prompt_choice("\nPress Enter to return", choices=[""], default="")
+        self.get_choice([""], "\nPress Enter to return", "")
