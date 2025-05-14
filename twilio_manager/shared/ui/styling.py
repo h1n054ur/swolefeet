@@ -47,7 +47,7 @@ def prompt_choice(prompt_text, choices, default="0"):
     Returns:
         str: The user's selected choice
     """
-    return Prompt.ask(prompt_text, choices=choices, default=default)
+    return Prompt.ask(prompt_text, choices=choices, default=default, show_choices=False)
 
 def print_panel(text, title=None, style='info'):
     """Print text in a panel with an optional title.
