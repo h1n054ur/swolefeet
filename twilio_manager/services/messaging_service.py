@@ -3,22 +3,39 @@ from twilio_manager.shared.config import ACCOUNT_SID, AUTH_TOKEN
 
 client = Client(ACCOUNT_SID, AUTH_TOKEN)
 
-def send_message_api(from_number, to_number, body):
+def send_message_api(from_number, to_number, body) -> tuple[bool, str | None]:
+    """Send a message using Twilio API.
+    
+    Args:
+        from_number (str): Sender phone number
+        to_number (str): Recipient phone number
+        body (str): Message content
+        
+    Returns:
+        tuple[bool, str | None]: (success, error_message)
+    """
     try:
         message = client.messages.create(
             from_=from_number,
             to=to_number,
             body=body
         )
-        return bool(message and message.sid)
+        return bool(message and message.sid), None
     except Exception as e:
-        print(f"[service] Failed to send message: {e}")
-        return False
+        return False, str(e)
 
-def fetch_message_logs_api(limit=20):
+def fetch_message_logs_api(limit=20) -> tuple[list, str | None]:
+    """Fetch message logs from Twilio API.
+    
+    Args:
+        limit (int): Maximum number of logs to fetch
+        
+    Returns:
+        tuple[list, str | None]: (message_logs, error_message)
+    """
     try:
         messages = client.messages.list(limit=limit)
-        return [
+        logs = [
             {
                 "from": m.from_,
                 "to": m.to,
@@ -27,13 +44,19 @@ def fetch_message_logs_api(limit=20):
                 "date_sent": str(m.date_sent)
             } for m in messages
         ]
+        return logs, None
     except Exception as e:
-        print(f"[service] Failed to fetch message logs: {e}")
-        return []
+        return [], str(e)
 
-
-def get_recent_contacts_api(limit=10):
-    """Get a list of unique recent contacts from message history."""
+def get_recent_contacts_api(limit=10) -> tuple[list, str | None]:
+    """Get a list of unique recent contacts from message history.
+    
+    Args:
+        limit (int): Maximum number of contacts to return
+        
+    Returns:
+        tuple[list, str | None]: (contacts_list, error_message)
+    """
     try:
         messages = client.messages.list(limit=100)  # Get more messages to find unique contacts
         contacts = {}
@@ -60,7 +83,6 @@ def get_recent_contacts_api(limit=10):
             if len(contacts) >= limit:
                 break
         
-        return list(contacts.values())[:limit]
+        return list(contacts.values())[:limit], None
     except Exception as e:
-        print(f"[service] Failed to get recent contacts: {e}")
-        return []
+        return [], str(e)

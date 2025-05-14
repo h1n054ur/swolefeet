@@ -39,14 +39,33 @@ def search_available_numbers(
         Tuple of (results list, status message)
     """
     try:
-        # Get ISO country code, default to US if not found
-        country = COUNTRY_MAP.get(country_code, 'US')
+        from twilio_manager.shared.utils.logger import get_logger
+        logger = get_logger(__name__)
+
+        # Clean and validate country code
+                # Clean and validate country code (accept dial codes or ISO codes)
+        raw_code = str(country_code).strip()
+        # If user passed an ISO code (e.g. "US"), accept as-is
+        if raw_code.upper() in set(COUNTRY_MAP.values()):
+            country = raw_code.upper()
+        else:
+            # Attempt dial‐code lookup with or without '+'
+            key = raw_code.upper()
+            country = COUNTRY_MAP.get(key) or COUNTRY_MAP.get(key.lstrip('+'))
+
+        if not country:
+            logger.error(f"Invalid country code: {raw_code}")
+            return [], f"Invalid country code: {raw_code}"
+            
+        logger.debug(f"Mapped country code {country_code} to {country}")
         
         # Default capabilities if none provided
         if capabilities is None:
             capabilities = ["SMS", "VOICE"]
         elif isinstance(capabilities, str):
             capabilities = [capabilities]
+            
+        logger.debug(f"Using capabilities: {capabilities}")
             
         # Convert capabilities to uppercase and deduplicate
         capabilities = list(set(cap.upper() for cap in capabilities))
@@ -71,37 +90,67 @@ def search_available_numbers(
     except Exception as e:
         return [], f"Core layer error: {str(e)}"
 
-def purchase_number(phone_number):
+def purchase_number(phone_number) -> Tuple[bool, Optional[str]]:
+    """Purchase a phone number.
+    
+    Args:
+        phone_number (str): The phone number to purchase
+        
+    Returns:
+        Tuple[bool, Optional[str]]: (success, error_message)
+    """
     try:
-        return purchase_number_api(phone_number)
+        success = purchase_number_api(phone_number)
+        return success, None
     except Exception as e:
-        print(f"[core] Purchase error: {e}")
-        return False
+        return False, str(e)
 
-def configure_number(sid_or_number, friendly_name=None, voice_url=None, sms_url=None):
+def configure_number(sid_or_number, friendly_name=None, voice_url=None, sms_url=None) -> Tuple[bool, Optional[str]]:
+    """Configure a phone number.
+    
+    Args:
+        sid_or_number (str): The phone number or SID to configure
+        friendly_name (str, optional): Friendly name for the number
+        voice_url (str, optional): URL for voice webhook
+        sms_url (str, optional): URL for SMS webhook
+        
+    Returns:
+        Tuple[bool, Optional[str]]: (success, error_message)
+    """
     try:
-        return configure_number_api(
+        success = configure_number_api(
             sid_or_number,
             friendly_name=friendly_name,
             voice_url=voice_url,
             sms_url=sms_url
         )
+        return success, None
     except Exception as e:
-        print(f"[core] Configure error: {e}")
-        return False
+        return False, str(e)
 
-def release_number(sid_or_number):
+def release_number(sid_or_number) -> Tuple[bool, Optional[str]]:
+    """Release a phone number.
+    
+    Args:
+        sid_or_number (str): The phone number or SID to release
+        
+    Returns:
+        Tuple[bool, Optional[str]]: (success, error_message)
+    """
     try:
-        return release_number_api(sid_or_number)
+        success = release_number_api(sid_or_number)
+        return success, None
     except Exception as e:
-        print(f"[core] Release error: {e}")
-        return False
+        return False, str(e)
 
-
-def get_active_numbers():
-    """Get all active phone numbers from the account."""
+def get_active_numbers() -> Tuple[List[Dict], Optional[str]]:
+    """Get all active phone numbers from the account.
+    
+    Returns:
+        Tuple[List[Dict], Optional[str]]: (numbers_list, error_message)
+    """
     try:
-        return get_active_numbers_api()
+        numbers = get_active_numbers_api()
+        return numbers, None
     except Exception as e:
-        print(f"[core] Get active numbers error: {e}")
-        return []
+        return [], str(e)

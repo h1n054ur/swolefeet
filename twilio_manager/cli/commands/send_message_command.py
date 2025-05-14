@@ -1,116 +1,86 @@
-from rich.console import Console
-from rich.prompt import Prompt, Confirm
-from rich.panel import Panel
-from rich.table import Table
 from twilio_manager.core.messaging import send_message, get_recent_contacts
 from twilio_manager.core.phone_numbers import get_active_numbers
 
-console = Console()
-
-def display_active_numbers(numbers):
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="dim")
-    table.add_column("Phone Number", style="cyan")
-    table.add_column("Friendly Name", style="green")
-
-    for idx, number in enumerate(numbers, 1):
-        table.add_row(
-            str(idx),
-            number['phoneNumber'],
-            number.get('friendlyName', 'N/A')
-        )
+def get_active_numbers_list():
+    """Get list of active numbers.
     
-    console.print(table)
+    Returns:
+        list: List of active phone numbers or None if none found
+    """
+    return get_active_numbers()
 
-def display_recent_contacts(contacts):
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="dim")
-    table.add_column("Phone Number", style="cyan")
-    table.add_column("Last Contact", style="green")
-
-    for idx, contact in enumerate(contacts, 1):
-        table.add_row(
-            str(idx),
-            contact['phoneNumber'],
-            contact.get('lastContact', 'N/A')
-        )
+def get_recent_contacts_list():
+    """Get list of recent contacts.
     
-    console.print(table)
+    Returns:
+        list: List of recent contacts
+    """
+    return get_recent_contacts()
+
+def prepare_message_params(from_number, to_number, body):
+    """Prepare message parameters.
+    
+    Args:
+        from_number (str): Sender's phone number
+        to_number (str): Recipient's phone number
+        body (str): Message body
+        
+    Returns:
+        dict: Message parameters
+    """
+    return {
+        'from_number': from_number,
+        'to_number': to_number,
+        'body': body
+    }
+
+def validate_recipient_number(number):
+    """Validate the recipient's phone number format.
+    
+    Args:
+        number (str): Phone number to validate
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Basic E.164 format validation
+    if not number.startswith('+'):
+        return False
+    if not number[1:].isdigit():
+        return False
+    if len(number) < 8 or len(number) > 15:  # E.164 length limits
+        return False
+    return True
+
+def send_sms_message(params):
+    """Send a message using the provided parameters.
+    
+    Args:
+        params (dict): Message parameters with from_number, to_number, and body
+        
+    Returns:
+        bool: True if message sent successfully, False otherwise
+    """
+    return send_message(params['from_number'], params['to_number'], params['body'])
+
+def delete_message_by_sid(message_sid):
+    """Delete a message by its SID.
+    
+    Args:
+        message_sid (str): Message SID
+        
+    Returns:
+        bool: True if message deleted successfully, False otherwise
+    """
+    from twilio_manager.core.messaging import delete_message
+    return delete_message(message_sid)
+
+def handle_delete_message_command():
+    """Handle message deletion."""
+    from twilio_manager.cli.menus.delete_message_menu import DeleteMessageMenu
+    DeleteMessageMenu().show()
 
 def handle_send_message_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]✉️ Send a Message[/bold cyan]"))
-
-    # Get list of active numbers
-    active_numbers = get_active_numbers()
-    
-    if not active_numbers:
-        console.print("[yellow]No active numbers found in your account.[/yellow]")
-        Prompt.ask("\nPress Enter to return")
-        return
-
-    # Select sender number
-    console.print("\n[bold]Select a number to send from:[/bold]")
-    display_active_numbers(active_numbers)
-
-    max_index = len(active_numbers)
-    selection = Prompt.ask(
-        "\nSelect a number (0 to cancel)",
-        choices=[str(i) for i in range(max_index + 1)]
-    )
-
-    if selection == "0":
-        console.print("[yellow]Message cancelled.[/yellow]")
-        return
-
-    from_number = active_numbers[int(selection) - 1]['phoneNumber']
-
-    # Get recent contacts
-    recent_contacts = get_recent_contacts()
-    
-    # Select recipient
-    console.print("\n[bold]Select recipient:[/bold]")
-    console.print("1. Choose from recent contacts")
-    console.print("2. Enter new number")
-    
-    recipient_choice = Prompt.ask("Select option", choices=["1", "2"])
-    
-    if recipient_choice == "1" and recent_contacts:
-        console.print("\n[bold]Recent Contacts:[/bold]")
-        display_recent_contacts(recent_contacts)
-        
-        max_contact_index = len(recent_contacts)
-        contact_selection = Prompt.ask(
-            "\nSelect a contact (0 to enter new number)",
-            choices=[str(i) for i in range(max_contact_index + 1)]
-        )
-        
-        if contact_selection == "0":
-            to_number = Prompt.ask("Enter recipient's number (E.164 format, e.g., +14155559876)")
-        else:
-            to_number = recent_contacts[int(contact_selection) - 1]['phoneNumber']
-    else:
-        to_number = Prompt.ask("Enter recipient's number (E.164 format, e.g., +14155559876)")
-
-    # Get message body
-    body = Prompt.ask("\nMessage body")
-
-    # Show summary and confirm
-    console.print("\n[bold]Message Summary:[/bold]")
-    console.print(f"From: [cyan]{from_number}[/cyan]")
-    console.print(f"To: [cyan]{to_number}[/cyan]")
-    console.print(f"Message:\n[green]{body}[/green]\n")
-
-    confirm = Confirm.ask("Send this message?")
-    if not confirm:
-        console.print("[yellow]Message not sent.[/yellow]")
-        return
-
-    success = send_message(from_number, to_number, body)
-
-    if success:
-        console.print(f"[green]✅ Message sent successfully to {to_number}![/green]")
-    else:
-        console.print(f"[red]❌ Failed to send message to {to_number}.[/red]")
-
-    Prompt.ask("\nPress Enter to return")
+    """Handle sending a message."""
+    from twilio_manager.cli.menus.send_message_menu import SendMessageMenu
+    SendMessageMenu().show()

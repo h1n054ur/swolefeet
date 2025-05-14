@@ -1,34 +1,41 @@
-from rich.console import Console
-from rich.panel import Panel
-from rich.prompt import Prompt
+from twilio_manager.cli.menus.base_menu import BaseMenu
+from twilio_manager.shared.constants import MENU_TITLES
+from twilio_manager.cli.menus.search.search_menu import SearchMenu
+from twilio_manager.cli.menus.purchase_menu import PurchaseMenu
+from twilio_manager.cli.menus.configure_menu import ConfigureMenu
+from twilio_manager.cli.menus.release_menu import ReleaseMenu
 
-from twilio_manager.cli.commands.search_command import handle_search_command
-from twilio_manager.cli.commands.purchase_command import handle_purchase_command
-from twilio_manager.cli.commands.configure_command import handle_configure_command
-from twilio_manager.cli.commands.release_command import handle_release_command
+class PhoneMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize phone menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
 
-console = Console()
+    def show(self):
+        """Display the phone number management menu."""
+        title, emoji = MENU_TITLES["phone"]
+        self.display(title, emoji, {
+            "1": "🔍 Search Available Numbers",
+            "2": "🛒 Purchase a Number",
+            "3": "⚙️  Configure a Number",
+            "4": "🗑 Release a Number",
+            "0": "🔙 Back"
+        })
 
-def show_phone_menu():
-    while True:
-        console.clear()
-        console.print(Panel.fit("[bold cyan]📞 Phone Number Management[/bold cyan]", title="Phone Menu"))
-
-        console.print("[bold magenta]1.[/bold magenta] 🔍 Search Available Numbers")
-        console.print("[bold magenta]2.[/bold magenta] 🛒 Purchase a Number")
-        console.print("[bold magenta]3.[/bold magenta] ⚙️  Configure a Number")
-        console.print("[bold magenta]4.[/bold magenta] 🗑 Release a Number")
-        console.print("[bold magenta]0.[/bold magenta] 🔙 Back\n")
-
-        choice = Prompt.ask("Choose an option", choices=["1", "2", "3", "4", "0"], default="0")
-
+    def handle_choice(self, choice):
+        """Handle the user's menu choice.
+        
+        Args:
+            choice (str): The user's selected option
+        """
         if choice == "1":
-            handle_search_command()
+            SearchMenu(parent=self).show()
         elif choice == "2":
-            handle_purchase_command()
+            PurchaseMenu(parent=self).show()
         elif choice == "3":
-            handle_configure_command()
+            ConfigureMenu(parent=self).show()
         elif choice == "4":
-            handle_release_command()
-        elif choice == "0":
-            break
+            ReleaseMenu(parent=self).show()
