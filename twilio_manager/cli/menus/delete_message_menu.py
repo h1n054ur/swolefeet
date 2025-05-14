@@ -31,11 +31,20 @@ class DeleteMessageMenu(BaseMenu):
             # Get message SID
             message_sid = get_message_sid()
             if not message_sid:
+                self.print_warning("No message SID provided.")
+                self.pause_and_return()
                 return
 
             # Confirm deletion
             if not confirm_deletion_prompt(message_sid):
+                self.print_warning("Deletion cancelled.")
+                self.pause_and_return()
                 return
 
             # Execute deletion
-            delete_message_by_sid(message_sid)
+            success = delete_message_by_sid(message_sid)
+            if success:
+                self.print_success(f"Message {message_sid} deleted successfully!")
+            else:
+                self.print_error(f"Failed to delete message {message_sid}")
+            self.pause_and_return()
