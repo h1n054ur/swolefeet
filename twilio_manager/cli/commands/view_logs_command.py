@@ -1,70 +1,52 @@
-from rich.console import Console
-from rich.table import Table
-from rich.prompt import Prompt
-from rich.panel import Panel
-
 from twilio_manager.core.messaging import get_message_logs
 from twilio_manager.core.voice import get_call_logs
 
-console = Console()
+def get_message_logs_list():
+    """Get list of message logs.
+    
+    Returns:
+        list: List of message log entries
+    """
+    return get_message_logs()
 
-def handle_view_message_logs_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]📄 Message Logs[/bold cyan]"))
+def get_call_logs_list():
+    """Get list of call logs.
+    
+    Returns:
+        list: List of call log entries
+    """
+    return get_call_logs()
 
-    logs = get_message_logs()
+def format_message_log_entry(log):
+    """Format a single message log entry.
+    
+    Args:
+        log (dict): Message log entry
+        
+    Returns:
+        dict: Formatted log entry
+    """
+    return {
+        'from': log.get("from", "—"),
+        'to': log.get("to", "—"),
+        'body': log.get("body", "")[:40] + "...",
+        'status': log.get("status", "—"),
+        'date_sent': log.get("date_sent", "—")
+    }
 
-    if not logs:
-        console.print("[red]No message logs found.[/red]")
-        Prompt.ask("\nPress Enter to return")
-        return
-
-    table = Table(title="Message Logs", show_lines=True)
-    table.add_column("From", style="cyan")
-    table.add_column("To", style="green")
-    table.add_column("Body", style="white")
-    table.add_column("Status", style="magenta")
-    table.add_column("Date", style="dim")
-
-    for log in logs:
-        table.add_row(
-            log.get("from", "—"),
-            log.get("to", "—"),
-            log.get("body", "")[:40] + "...",
-            log.get("status", "—"),
-            log.get("date_sent", "—")
-        )
-
-    console.print(table)
-    Prompt.ask("\nPress Enter to return")
-
-
-def handle_view_call_logs_command():
-    console.clear()
-    console.print(Panel.fit("[bold cyan]📄 Call Logs[/bold cyan]"))
-
-    logs = get_call_logs()
-
-    if not logs:
-        console.print("[red]No call logs found.[/red]")
-        Prompt.ask("\nPress Enter to return")
-        return
-
-    table = Table(title="Call Logs", show_lines=True)
-    table.add_column("From", style="cyan")
-    table.add_column("To", style="green")
-    table.add_column("Status", style="magenta")
-    table.add_column("Duration", justify="right")
-    table.add_column("Start Time", style="dim")
-
-    for log in logs:
-        table.add_row(
-            log.get("from", "—"),
-            log.get("to", "—"),
-            log.get("status", "—"),
-            str(log.get("duration", "0")),
-            log.get("start_time", "—")
-        )
-
-    console.print(table)
-    Prompt.ask("\nPress Enter to return")
+def format_call_log_entry(log):
+    """Format a single call log entry.
+    
+    Args:
+        log (dict): Call log entry
+        
+    Returns:
+        dict: Formatted log entry
+    """
+    return {
+        'from': log.get("from", "—"),
+        'to': log.get("to", "—"),
+        'status': log.get("status", "—"),
+        'duration': str(log.get("duration", "0")),
+        'start_time': log.get("start_time", "—")
+    }

@@ -1,39 +1,67 @@
-from rich.console import Console
-from rich.panel import Panel
-from rich.prompt import Prompt
+from twilio_manager.cli.menus.base_menu import BaseMenu
+from twilio_manager.shared.ui.styling import console
+from twilio_manager.shared.constants import MENU_TITLES, APP_TITLE, APP_EMOJI
+from twilio_manager.cli.menus.phone_menu import PhoneMenu
+from twilio_manager.cli.menus.messaging_menu import MessagingMenu
+from twilio_manager.cli.menus.voice_menu import VoiceMenu
+from twilio_manager.cli.menus.account_menu import AccountMenu
+from twilio_manager.cli.menus.advanced_menu import AdvancedMenu
+from twilio_manager.shared.utils.logger import get_logger
 
-from twilio_manager.cli.menus.phone_menu import show_phone_menu
-from twilio_manager.cli.menus.messaging_menu import show_messaging_menu
-from twilio_manager.cli.menus.voice_menu import show_voice_menu
-from twilio_manager.cli.menus.account_menu import show_account_menu
-from twilio_manager.cli.menus.advanced_menu import show_advanced_menu
+logger = get_logger(__name__)
 
-console = Console()
+class MainMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize main menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu to return to
+        """
+        super().__init__(parent)
 
-def show_main_menu():
-    while True:
-        console.clear()
-        console.print(Panel.fit("[bold cyan]📘 Twilio CLI Manager[/bold cyan]", title="Main Menu"))
+    def show(self):
+        """Display the main menu."""
+        logger.info("Opening main menu")
+        self.display(APP_TITLE, APP_EMOJI, {
+            "1": "📞 Phone Numbers",
+            "2": "📨 Messaging",
+            "3": "📞 Voice",
+            "4": "🧾 Account",
+            "5": "🧠 Advanced Features",
+            "0": "❌ Exit"
+        })
 
-        console.print("[bold magenta]1.[/bold magenta] 📞 Phone Numbers")
-        console.print("[bold magenta]2.[/bold magenta] 📨 Messaging")
-        console.print("[bold magenta]3.[/bold magenta] 📞 Voice")
-        console.print("[bold magenta]4.[/bold magenta] 🧾 Account")
-        console.print("[bold magenta]5.[/bold magenta] 🧠 Advanced Features")
-        console.print("[bold magenta]0.[/bold magenta] ❌ Exit\n")
-
-        choice = Prompt.ask("Choose an option", choices=["1", "2", "3", "4", "5", "0"], default="0")
-
-        if choice == "1":
-            show_phone_menu()
-        elif choice == "2":
-            show_messaging_menu()
-        elif choice == "3":
-            show_voice_menu()
-        elif choice == "4":
-            show_account_menu()
-        elif choice == "5":
-            show_advanced_menu()
-        elif choice == "0":
-            console.print("\n[green]Goodbye![/green]")
-            break
+    def handle_choice(self, choice):
+        """Handle the user's menu choice.
+        
+        Args:
+            choice (str): The user's selected option
+        """
+        logger.debug(f"User selected option: {choice}")
+        
+        try:
+            if choice == "1":
+                logger.info("Opening Phone Numbers menu")
+                PhoneMenu(parent=self).show()
+            elif choice == "2":
+                logger.info("Opening Messaging menu")
+                MessagingMenu(parent=self).show()
+            elif choice == "3":
+                logger.info("Opening Voice menu")
+                VoiceMenu(parent=self).show()
+            elif choice == "4":
+                logger.info("Opening Account menu")
+                AccountMenu(parent=self).show()
+            elif choice == "5":
+                logger.info("Opening Advanced Features menu")
+                AdvancedMenu(parent=self).show()
+            elif choice == "0":
+                logger.info("User exiting application")
+                self.clear()
+                console.print("\n[green]Goodbye![/green]")
+                exit(0)  # Only use exit() in main menu
+            else:
+                logger.warning(f"Invalid menu choice: {choice}")
+        except Exception as e:
+            logger.error(f"Error handling menu choice: {choice}", exc_info=True)
+            raise

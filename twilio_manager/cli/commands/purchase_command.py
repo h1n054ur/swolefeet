@@ -1,108 +1,47 @@
-from rich.console import Console
-from rich.prompt import Prompt, Confirm
-from rich.panel import Panel
-from rich.table import Table
 from twilio_manager.core.phone_numbers import purchase_number, search_available_numbers
 
-console = Console()
-
-def display_number_options(numbers):
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("#", style="dim")
-    table.add_column("Phone Number", style="cyan")
-    table.add_column("Region", style="green")
-    table.add_column("Monthly Cost", style="yellow")
-
-    for idx, number in enumerate(numbers, 1):
-        table.add_row(
-            str(idx),
-            number['phoneNumber'],
-            f"{number.get('region', 'N/A')}",
-            f"${number.get('monthlyPrice', 'N/A')}"
-        )
+def get_country_codes():
+    """Get mapping of country codes.
     
-    console.print(table)
-
-def handle_purchase_command(pre_selected_number=None):
+    Returns:
+        dict: Mapping of country codes
     """
-    Handle the purchase of a phone number.
+    return {
+        "1": "+1",  # US/Canada
+        "2": "+44", # UK
+        "3": "+61"  # Australia
+    }
+
+def search_available_numbers_by_country(country_code):
+    """Search for available numbers in a country.
     
     Args:
-        pre_selected_number: Optional phone number to purchase directly
-    """
-    console.clear()
-    console.print(Panel.fit("[bold cyan]🛒 Purchase a Phone Number[/bold cyan]"))
-
-    if pre_selected_number:
-        # If number is pre-selected (e.g., from search), confirm and purchase
-        confirm = Confirm.ask(f"Are you sure you want to purchase [bold green]{pre_selected_number}[/bold green]?")
+        country_code (str): Country code (e.g., "+1")
         
-        if not confirm:
-            console.print("[yellow]Purchase cancelled.[/yellow]")
-            return
+    Returns:
+        list: Available numbers or None if none found
+    """
+    results, error = search_available_numbers(country_code)
+    if error:
+        return None
+    return results
 
-        success = purchase_number(pre_selected_number)
-
-        if success:
-            console.print(f"[green]✅ Number {pre_selected_number} purchased successfully![/green]")
-        else:
-            console.print(f"[red]❌ Failed to purchase number {pre_selected_number}.[/red]")
-
-        Prompt.ask("\nPress Enter to return")
-        return
-
-    # If no pre-selected number, show search interface
-    console.print("\n[bold]Search for available numbers:[/bold]")
-    console.print("1. US/Canada (+1)")
-    console.print("2. UK (+44)")
-    console.print("3. Australia (+61)")
-    console.print("4. Other (specify country code)")
-
-    country_choice = Prompt.ask("Select country", choices=["1", "2", "3", "4"], default="1")
-    country_codes = {
-        "1": "+1",
-        "2": "+44",
-        "3": "+61"
-    }
+def purchase_phone_number(phone_number):
+    """Purchase a phone number.
     
-    country_code = country_codes.get(country_choice)
-    if country_choice == "4":
-        country_code = Prompt.ask("Enter country code (with +)")
+    Args:
+        phone_number (str): Phone number to purchase
+        
+    Returns:
+        Tuple[bool, Optional[str]]: (success, error_message)
+    """
+    return purchase_number(phone_number)
 
-    # Search for available numbers
-    available_numbers = search_available_numbers(country_code)
+def handle_purchase_command(pre_selected_number=None):
+    """Handle the purchase of a phone number.
     
-    if not available_numbers:
-        console.print("[red]No numbers available in the selected region.[/red]")
-        Prompt.ask("\nPress Enter to return")
-        return
-
-    console.print("\n[bold]Available Numbers:[/bold]")
-    display_number_options(available_numbers)
-
-    # Let user select a number by index
-    max_index = len(available_numbers)
-    selection = Prompt.ask(
-        "\nSelect a number to purchase (0 to cancel)",
-        choices=[str(i) for i in range(max_index + 1)]
-    )
-
-    if selection == "0":
-        console.print("[yellow]Purchase cancelled.[/yellow]")
-        return
-
-    selected_number = available_numbers[int(selection) - 1]['phoneNumber']
-    confirm = Confirm.ask(f"Are you sure you want to purchase [bold green]{selected_number}[/bold green]?")
-    
-    if not confirm:
-        console.print("[yellow]Purchase cancelled.[/yellow]")
-        return
-
-    success = purchase_number(selected_number)
-
-    if success:
-        console.print(f"[green]✅ Number {selected_number} purchased successfully![/green]")
-    else:
-        console.print(f"[red]❌ Failed to purchase number {selected_number}.[/red]")
-
-    Prompt.ask("\nPress Enter to return")
+    Args:
+        pre_selected_number (str, optional): Phone number to purchase directly
+    """
+    from twilio_manager.cli.menus.purchase_menu import PurchaseMenu
+    PurchaseMenu(pre_selected_number).show()
