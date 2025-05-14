@@ -18,11 +18,14 @@ from twilio_manager.cli.commands.view_logs_command import (
 class ViewMessageLogsMenu(BaseMenu):
     def show(self):
         """Display message logs with pagination."""
+        self.clear()
+        self.print_title("Message Logs", "📄")
+
         # Get logs
         logs = get_message_logs_list()
         if not logs:
-            print_error("No message logs found.")
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+            self.print_error("No message logs found.")
+            self.get_choice([""], "\nPress Enter to return", "")
             return
 
         # Format logs
@@ -59,7 +62,7 @@ class ViewMessageLogsMenu(BaseMenu):
             console.print(table)
 
             # Show navigation options
-            print_panel("Options:", style='highlight')
+            self.print_panel("Options:", style='highlight')
             console.print("0. Return to menu", style=STYLES['data'])
             if total_pages > 1:
                 if current_page > 1:
@@ -75,10 +78,10 @@ class ViewMessageLogsMenu(BaseMenu):
                 if current_page < total_pages:
                     choices.extend(["N", "n"])
 
-            choice = prompt_choice(
+            choice = self.get_choice(
+                choices,
                 "Select an option",
-                choices=choices,
-                default="0"
+                "0"
             )
 
             if choice == "0":

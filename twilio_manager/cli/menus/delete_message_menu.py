@@ -13,11 +13,14 @@ from twilio_manager.shared.ui.styling import (
 class DeleteMessageMenu(BaseMenu):
     def show(self):
         """Display the delete message menu."""
+        self.clear()
+        self.print_title("Delete Message", "🗑️")
+        
         options = {
             "1": "Delete a message",
             "0": "Return to previous menu"
         }
-        self.display("Delete Message", "🗑️", options)
+        self.display_options(options)
 
     def handle_choice(self, choice):
         """Handle the user's menu choice."""
