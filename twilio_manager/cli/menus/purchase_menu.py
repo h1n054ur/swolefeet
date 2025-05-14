@@ -20,78 +20,107 @@ from twilio_manager.cli.commands.purchase_command import (
 class SelectCountryMenu(BaseMenu):
     def show(self):
         """Display country selection menu."""
-        self.clear()
-        self.print_title("Select Country", "🌎")
-        self.print_option("1", "US/Canada (+1)")
-        self.print_option("2", "UK (+44)")
-        self.print_option("3", "Australia (+61)")
-        self.print_option("4", "Other (specify country code)")
+        self.display("Select Country", "🌎", {
+            "1": "US/Canada (+1)",
+            "2": "UK (+44)",
+            "3": "Australia (+61)",
+            "4": "Other (specify country code)",
+            "0": "Back"
+        })
 
-        country_choice = self.get_choice(["1", "2", "3", "4"], "Select country", "1")
-        country_codes = get_country_codes()
+    def handle_choice(self, choice):
+        """Handle country selection.
         
-        country_code = country_codes.get(country_choice)
-        if country_choice == "4":
+        Args:
+            choice (str): The user's selected option
+        """
+        country_codes = get_country_codes()
+        country_code = country_codes.get(choice)
+        
+        if choice == "4":
             country_code = self.get_choice(None, "Enter country code (with +)")
-
-        return country_code
+            if not country_code:
+                return
+        
+        if country_code:
+            # Search for numbers
+            self.print_info("Searching...")
+            available_numbers = search_available_numbers_by_country(country_code)
+            
+            if not available_numbers:
+                self.print_error("No numbers available in the selected region.")
+                self.pause_and_return()
+                return
+            
+            # Show available numbers menu
+            AvailableNumbersMenu(self, available_numbers).show()
 
 class AvailableNumbersMenu(BaseMenu):
-    def __init__(self, available_numbers):
+    def __init__(self, parent=None, available_numbers=None):
         """Initialize the menu.
         
         Args:
+            parent (BaseMenu, optional): Parent menu
             available_numbers (list): List of available phone numbers
         """
-        super().__init__()
-        self.available_numbers = available_numbers
+        super().__init__(parent)
+        self.available_numbers = available_numbers or []
 
     def show(self):
-        """Display available numbers and get user selection."""
-        self.clear()
-        self.print_title("Available Numbers", "📱")
-
-        table = create_table(columns=["#", "Phone Number", "Region", "Monthly Cost"])
+        """Display available numbers menu."""
+        # Create options dictionary
+        options = {}
         for idx, number in enumerate(self.available_numbers, 1):
-            table.add_row(
-                str(idx),
-                number['phoneNumber'],
-                f"{number.get('region', 'N/A')}",
-                f"${number.get('monthlyPrice', 'N/A')}",
-                style=STYLES['data']
-            )
-        console.print(table)
+            region = number.get('region', 'N/A')
+            price = number.get('monthlyPrice', 'N/A')
+            options[str(idx)] = f"{number['phoneNumber']} ({region}) - ${price}/mo"
+        options["0"] = "Back"
 
-        # Get user selection
-        selection = self.get_choice(
-            [str(i) for i in range(len(self.available_numbers) + 1)],
-            "\nSelect a number to purchase (0 to cancel)"
-        )
+        self.display("Available Numbers", "📱", options)
 
-        if selection == "0":
-            self.print_warning("Purchase cancelled.")
-            return None
-
-        return self.available_numbers[int(selection) - 1]['phoneNumber']
+    def handle_choice(self, choice):
+        """Handle number selection.
+        
+        Args:
+            choice (str): The user's selected option
+        """
+        if not choice.isdigit() or int(choice) < 1 or int(choice) > len(self.available_numbers):
+            return
+            
+        selected_number = self.available_numbers[int(choice) - 1]['phoneNumber']
+        PurchaseConfirmationMenu(self, selected_number).show()
 
 class PurchaseConfirmationMenu(BaseMenu):
-    def __init__(self, phone_number):
+    def __init__(self, parent=None, phone_number=None):
         """Initialize the menu.
         
         Args:
+            parent (BaseMenu, optional): Parent menu
             phone_number (str): Phone number to purchase
         """
-        super().__init__()
+        super().__init__(parent)
         self.phone_number = phone_number
 
     def show(self):
         """Display purchase confirmation menu."""
-        self.clear()
-        self.print_title("Confirm Purchase", "💰")
+        self.display("Confirm Purchase", "💰", {
+            "1": f"Purchase {self.phone_number}",
+            "0": "Cancel"
+        })
+
+    def handle_choice(self, choice):
+        """Handle purchase confirmation.
         
+        Args:
+            choice (str): The user's selected option
+        """
+        if choice != "1":
+            return
+
         if not confirm_action(f"Are you sure you want to purchase {self.phone_number}?"):
             self.print_warning("Purchase cancelled.")
-            return False
+            self.pause_and_return()
+            return
 
         success, error = purchase_phone_number(self.phone_number)
 
@@ -101,46 +130,33 @@ class PurchaseConfirmationMenu(BaseMenu):
             error_msg = error or "Unknown error"
             self.print_error(f"Failed to purchase number {self.phone_number}: {error_msg}")
 
-        self.get_choice([""], "\nPress Enter to return", "")
-        return success
+        self.pause_and_return()
 
 class PurchaseMenu(BaseMenu):
-    def __init__(self, pre_selected_number=None):
+    def __init__(self, parent=None, pre_selected_number=None):
         """Initialize the purchase menu.
         
         Args:
+            parent (BaseMenu, optional): Parent menu
             pre_selected_number (str, optional): Phone number to purchase directly
         """
-        super().__init__()
+        super().__init__(parent)
         self.pre_selected_number = pre_selected_number
 
     def show(self):
-        """Display the purchase menu and handle purchase flow."""
+        """Display the purchase menu."""
         if self.pre_selected_number:
             # Direct purchase flow
-            PurchaseConfirmationMenu(self.pre_selected_number).show()
+            PurchaseConfirmationMenu(self, self.pre_selected_number).show()
             return
 
-        # Search and purchase flow
-        country_code = SelectCountryMenu().show()
-        if not country_code:
-            return
+        # Show country selection menu
+        SelectCountryMenu(self).show()
 
-        # Search for numbers
-        self.print_info("Searching...")
-        available_numbers = search_available_numbers_by_country(country_code)
+    def handle_choice(self, choice):
+        """Handle menu choice.
         
-        if not available_numbers:
-            self.clear()
-            self.print_title("No Numbers Found", "❌")
-            self.print_error("No numbers available in the selected region.")
-            self.get_choice([""], "\nPress Enter to return", "")
-            return
-
-        # Show available numbers and get selection
-        selected_number = AvailableNumbersMenu(available_numbers).show()
-        if not selected_number:
-            return
-
-        # Confirm and execute purchase
-        PurchaseConfirmationMenu(selected_number).show()
+        Args:
+            choice (str): The user's selected option
+        """
+        pass  # All handling done in show() since this is just a router menu

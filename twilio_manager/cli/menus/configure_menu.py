@@ -17,117 +17,148 @@ from twilio_manager.cli.commands.configure_command import (
 )
 
 class ConfigureMenu(BaseMenu):
+    def __init__(self, parent=None):
+        """Initialize the configure menu.
+        
+        Args:
+            parent (BaseMenu, optional): Parent menu
+        """
+        super().__init__(parent)
+        self.active_numbers = []
+        self.selected_number = None
+        self.changes = {}
+
     def show(self):
-        """Display the configure menu and handle configuration flow."""
+        """Display the configure menu."""
         # Get active numbers
-        active_numbers = get_active_numbers_list()
-        if not active_numbers:
-            print_warning("No active numbers found in your account.")
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+        self.active_numbers = get_active_numbers_list()
+        if not self.active_numbers:
+            self.print_warning("No active numbers found in your account.")
+            self.pause_and_return()
             return
 
-        # Display active numbers
-        print_panel("Select a number to configure:", style='highlight')
-        table = create_table(columns=["#", "Phone Number", "Friendly Name", "Voice URL", "SMS URL"])
-        for idx, number in enumerate(active_numbers, 1):
-            table.add_row(
-                str(idx),
-                number['phoneNumber'],
-                number.get('friendlyName', 'N/A'),
-                number.get('voiceUrl', 'N/A'),
-                number.get('smsUrl', 'N/A'),
-                style=STYLES['data']
-            )
-        console.print(table)
+        # Create options dictionary
+        options = {}
+        for idx, number in enumerate(self.active_numbers, 1):
+            friendly_name = number.get('friendlyName', 'N/A')
+            options[str(idx)] = f"{number['phoneNumber']} ({friendly_name})"
+        options["0"] = "Back"
 
-        # Select number
-        max_index = len(active_numbers)
-        selection = prompt_choice(
-            "\nSelect a number (0 to cancel)",
-            choices=[str(i) for i in range(max_index + 1)]
-        )
+        self.display("Select a number to configure", "⚙️", options)
 
-        if selection == "0":
-            print_warning("Configuration cancelled.")
+    def handle_choice(self, choice):
+        """Handle number selection and configuration.
+        
+        Args:
+            choice (str): The user's selected option
+        """
+        if not choice.isdigit() or int(choice) < 1 or int(choice) > len(self.active_numbers):
             return
 
-        selected_number = active_numbers[int(selection) - 1]
+        self.selected_number = self.active_numbers[int(choice) - 1]
+        self._show_current_settings()
+        ConfigSettingsMenu(self, self.selected_number).show()
 
-        # Show current settings
+    def _show_current_settings(self):
+        """Display current settings for selected number."""
         print_panel("Current Settings", style='highlight')
-        print_info(f"Phone Number: {selected_number['phoneNumber']}")
+        print_info(f"Phone Number: {self.selected_number['phoneNumber']}")
         console.print("Friendly Name:", style=STYLES['dim'])
-        console.print(selected_number.get('friendlyName', 'N/A'), style=STYLES['info'])
+        console.print(self.selected_number.get('friendlyName', 'N/A'), style=STYLES['info'])
         console.print("\nVoice URL:", style=STYLES['dim'])
-        console.print(selected_number.get('voiceUrl', 'N/A'), style=STYLES['info'])
+        console.print(self.selected_number.get('voiceUrl', 'N/A'), style=STYLES['info'])
         console.print("\nSMS URL:", style=STYLES['dim'])
-        console.print(selected_number.get('smsUrl', 'N/A'), style=STYLES['info'])
+        console.print(self.selected_number.get('smsUrl', 'N/A'), style=STYLES['info'])
 
-        # Configuration options
-        print_panel("\nWhat would you like to configure?", style='highlight')
-        console.print("1. Friendly Name", style=STYLES['data'])
-        console.print("2. Voice Webhook URL", style=STYLES['data'])
-        console.print("3. SMS Webhook URL", style=STYLES['data'])
-        console.print("4. All Settings", style=STYLES['data'])
+class ConfigSettingsMenu(BaseMenu):
+    def __init__(self, parent=None, number=None):
+        """Initialize the settings menu.
         
-        config_choice = prompt_choice("Select option", choices=["1", "2", "3", "4"])
-        
-        changes = {}
-        
-        if config_choice in ["1", "4"]:
-            changes['friendly_name'] = prompt_choice(
-                "Enter new friendly name",
-                choices=None,
-                default=selected_number.get('friendlyName', '')
-            )
-        
-        if config_choice in ["2", "4"]:
-            changes['voice_url'] = prompt_choice(
-                "Enter new voice webhook URL",
-                choices=None,
-                default=selected_number.get('voiceUrl', '')
-            )
-        
-        if config_choice in ["3", "4"]:
-            changes['sms_url'] = prompt_choice(
-                "Enter new SMS webhook URL",
-                choices=None,
-                default=selected_number.get('smsUrl', '')
-            )
+        Args:
+            parent (BaseMenu, optional): Parent menu
+            number (dict): Selected phone number details
+        """
+        super().__init__(parent)
+        self.number = number
+        self.changes = {}
 
-        # Show summary of changes
-        print_panel("Review Changes", style='highlight')
-        if changes.get('friendly_name'):
-            console.print("Friendly Name:", style=STYLES['dim'])
-            console.print(selected_number.get('friendlyName', 'N/A'), style=STYLES['error'])
-            console.print("→", style=STYLES['dim'])
-            console.print(changes['friendly_name'], style=STYLES['success'])
-        if changes.get('voice_url'):
-            console.print("\nVoice URL:", style=STYLES['dim'])
-            console.print(selected_number.get('voiceUrl', 'N/A'), style=STYLES['error'])
-            console.print("→", style=STYLES['dim'])
-            console.print(changes['voice_url'], style=STYLES['success'])
-        if changes.get('sms_url'):
-            console.print("\nSMS URL:", style=STYLES['dim'])
-            console.print(selected_number.get('smsUrl', 'N/A'), style=STYLES['error'])
-            console.print("→", style=STYLES['dim'])
-            console.print(changes['sms_url'], style=STYLES['success'])
+    def show(self):
+        """Display configuration options menu."""
+        self.display("Configure Settings", "⚙️", {
+            "1": "Friendly Name",
+            "2": "Voice Webhook URL",
+            "3": "SMS Webhook URL",
+            "4": "All Settings",
+            "0": "Back"
+        })
 
-        if not confirm_action("\nApply these changes?"):
-            print_warning("Configuration cancelled.")
+    def handle_choice(self, choice):
+        """Handle settings configuration.
+        
+        Args:
+            choice (str): The user's selected option
+        """
+        if choice not in ["1", "2", "3", "4"]:
             return
 
-        # Apply changes
-        success = configure_phone_number(
-            selected_number['sid'],
-            friendly_name=changes.get('friendly_name'),
-            voice_url=changes.get('voice_url'),
-            sms_url=changes.get('sms_url')
-        )
+        # Get changes based on selection
+        if choice in ["1", "4"]:
+            self.changes['friendly_name'] = self.get_choice(
+                None,
+                "Enter new friendly name",
+                default=self.number.get('friendlyName', '')
+            )
+        
+        if choice in ["2", "4"]:
+            self.changes['voice_url'] = self.get_choice(
+                None,
+                "Enter new voice webhook URL",
+                default=self.number.get('voiceUrl', '')
+            )
+        
+        if choice in ["3", "4"]:
+            self.changes['sms_url'] = self.get_choice(
+                None,
+                "Enter new SMS webhook URL",
+                default=self.number.get('smsUrl', '')
+            )
 
-        if success:
-            print_success("Number configured successfully!")
+        # Show changes summary
+        self._show_changes_summary()
+
+        # Confirm and apply changes
+        if confirm_action("\nApply these changes?"):
+            success = configure_phone_number(
+                self.number['sid'],
+                friendly_name=self.changes.get('friendly_name'),
+                voice_url=self.changes.get('voice_url'),
+                sms_url=self.changes.get('sms_url')
+            )
+
+            if success:
+                self.print_success("Number configured successfully!")
+            else:
+                self.print_error("Failed to update number settings.")
         else:
-            print_error("Failed to update number settings.")
+            self.print_warning("Configuration cancelled.")
 
-        prompt_choice("\nPress Enter to return", choices=[""], default="")
+        self.pause_and_return()
+
+    def _show_changes_summary(self):
+        """Display summary of changes to be made."""
+        print_panel("Review Changes", style='highlight')
+        if self.changes.get('friendly_name'):
+            console.print("Friendly Name:", style=STYLES['dim'])
+            console.print(self.number.get('friendlyName', 'N/A'), style=STYLES['error'])
+            console.print("→", style=STYLES['dim'])
+            console.print(self.changes['friendly_name'], style=STYLES['success'])
+        if self.changes.get('voice_url'):
+            console.print("\nVoice URL:", style=STYLES['dim'])
+            console.print(self.number.get('voiceUrl', 'N/A'), style=STYLES['error'])
+            console.print("→", style=STYLES['dim'])
+            console.print(self.changes['voice_url'], style=STYLES['success'])
+        if self.changes.get('sms_url'):
+            console.print("\nSMS URL:", style=STYLES['dim'])
+            console.print(self.number.get('smsUrl', 'N/A'), style=STYLES['error'])
+            console.print("→", style=STYLES['dim'])
+            console.print(self.changes['sms_url'], style=STYLES['success'])
