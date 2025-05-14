@@ -19,71 +19,88 @@ class ViewMessageLogsMenu(BaseMenu):
     def show(self):
         """Display message logs with pagination."""
         # Get logs
-        logs = get_message_logs_list()
+        logs, error = get_message_logs_list()
+        if error:
+            self.print_error(f"Failed to fetch message logs: {error}")
+            self.pause_and_return()
+            return
+        
         if not logs:
-            print_error("No message logs found.")
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+            self.print_warning("No message logs found.")
+            self.pause_and_return()
             return
 
         # Format logs
-        formatted_logs = [format_message_log_entry(log) for log in logs]
+        formatted_logs = []
+        for log in logs:
+            if isinstance(log, dict):  # Ensure log is a dictionary
+                formatted_logs.append(format_message_log_entry(log))
+            else:
+                self.print_warning(f"Skipping malformed log entry: {log}")
+                continue
 
-        # Display logs with pagination
-        page_size = 10
-        current_page = 1
-        total_pages = (len(formatted_logs) + page_size - 1) // page_size
+        if not formatted_logs:
+            self.print_warning("No valid message logs to display.")
+            self.pause_and_return()
+            return
 
-        while True:
-            # Calculate page range
-            start_idx = (current_page - 1) * page_size
-            end_idx = min(start_idx + page_size, len(formatted_logs))
-            page_logs = formatted_logs[start_idx:end_idx]
+        # Initialize pagination
+        self.page_size = 10
+        self.current_page = 1
+        self.total_pages = (len(formatted_logs) + self.page_size - 1) // self.page_size
+        self.formatted_logs = formatted_logs
 
-            # Create and display table
-            table = create_table(
-                columns=["From", "To", "Body", "Status", "Date"],
-                title=f"Message Logs (Page {current_page}/{total_pages})"
+        # Show first page
+        self._show_current_page()
+
+    def _show_current_page(self):
+        """Display the current page of logs."""
+        # Calculate page range
+        start_idx = (self.current_page - 1) * self.page_size
+        end_idx = min(start_idx + self.page_size, len(self.formatted_logs))
+        page_logs = self.formatted_logs[start_idx:end_idx]
+
+        # Create and display table
+        table = create_table(
+            columns=["From", "To", "Body", "Status", "Date"],
+            title=f"Message Logs (Page {self.current_page}/{self.total_pages})"
+        )
+
+        for log in page_logs:
+            table.add_row(
+                log['from'],
+                log['to'],
+                log['body'],
+                log['status'],
+                log['date_sent'],
+                style=STYLES['data']
             )
 
-            for log in page_logs:
-                table.add_row(
-                    log['from'],
-                    log['to'],
-                    log['body'],
-                    log['status'],
-                    log['date_sent'],
-                    style=STYLES['data']
-                )
+        console.print("\n")
+        console.print(table)
 
-            console.print("\n")
-            console.print(table)
+        # Show navigation options
+        options = {"0": "Return to menu"}
+        if self.total_pages > 1:
+            if self.current_page > 1:
+                options["P"] = "Previous page"
+            if self.current_page < self.total_pages:
+                options["N"] = "Next page"
 
-            # Show navigation options
-            print_panel("Options:", style='highlight')
-            console.print("0. Return to menu", style=STYLES['data'])
-            if total_pages > 1:
-                if current_page > 1:
-                    console.print("P/p. Previous page", style=STYLES['data'])
-                if current_page < total_pages:
-                    console.print("N/n. Next page", style=STYLES['data'])
+        self.display(
+            title="Message Logs Navigation",
+            emoji="📜",
+            options=options
+        )
 
-            # Get user choice
-            choices = ["0"]
-            if total_pages > 1:
-                if current_page > 1:
-                    choices.extend(["P", "p"])
-                if current_page < total_pages:
-                    choices.extend(["N", "n"])
-
-            choice = prompt_choice(
-                "Select an option",
-                choices=choices,
-                default="0"
-            )
-
-            if choice == "0":
-                break
-            elif choice.upper() == "P" and current_page > 1:
-                current_page -= 1
-            elif choice.upper() == "N" and current_page < total_pages:
-                current_page += 1
+    def handle_choice(self, choice):
+        """Handle navigation choice."""
+        choice = choice.upper()
+        if choice == "P" and self.current_page > 1:
+            self.current_page -= 1
+            self._show_current_page()
+        elif choice == "N" and self.current_page < self.total_pages:
+            self.current_page += 1
+            self._show_current_page()
+        else:
+            self.return_to_parent()

@@ -5,9 +5,10 @@ def get_message_logs_list():
     """Get list of message logs.
     
     Returns:
-        list: List of message log entries
+        tuple[list, str | None]: (message_logs, error_message)
     """
-    return get_message_logs()
+    logs, error = get_message_logs()
+    return logs, error
 
 def get_call_logs_list():
     """Get list of call logs.
