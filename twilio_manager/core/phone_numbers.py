@@ -1,3 +1,5 @@
+# File: twilio_manager/core/phone_numbers.py
+
 from typing import List, Dict, Tuple, Optional, Callable
 from twilio_manager.services.phone_service import (
     search_available_numbers_api,
@@ -43,7 +45,6 @@ def search_available_numbers(
         logger = get_logger(__name__)
 
         # Clean and validate country code
-                # Clean and validate country code (accept dial codes or ISO codes)
         raw_code = str(country_code).strip()
         # If user passed an ISO code (e.g. "US"), accept as-is
         if raw_code.upper() in set(COUNTRY_MAP.values()):
@@ -78,10 +79,10 @@ def search_available_numbers(
         # Clean up pattern
         pattern = str(pattern).strip() if pattern else ""
         
-        # Call API with normalized parameters
+        # Call API with normalized parameters (fixed keyword here)
         return search_available_numbers_api(
             country=country,
-            type=number_type,
+            number_type=number_type,
             capabilities=capabilities,
             contains=pattern,
             progress_callback=progress_callback
@@ -105,7 +106,12 @@ def purchase_number(phone_number) -> Tuple[bool, Optional[str]]:
     except Exception as e:
         return False, str(e)
 
-def configure_number(sid_or_number, friendly_name=None, voice_url=None, sms_url=None) -> Tuple[bool, Optional[str]]:
+def configure_number(
+    sid_or_number, 
+    friendly_name=None, 
+    voice_url=None, 
+    sms_url=None
+) -> Tuple[bool, Optional[str]]:
     """Configure a phone number.
     
     Args:
