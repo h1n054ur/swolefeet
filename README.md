@@ -64,8 +64,8 @@ A Python-based wrapper around the Twilio SDK, built in just 3 days using AI help
 
 1. **Clone the repository**  
    ```bash
-   git clone https://github.com/<your-org>/swolefeet.git
-   cd swolefeet
+   git clone https://github.com/<your-org>/twilio-cli-manager.git
+   cd twilio-cli-manager
    ```
 
 2. **Create & activate a virtual environment**  
