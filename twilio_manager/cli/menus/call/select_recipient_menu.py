@@ -10,37 +10,74 @@ from twilio_manager.shared.ui.styling import (
 from twilio_manager.core.messaging import get_recent_contacts
 
 class SelectRecipientMenu(BaseMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.recent_contacts = None
+        self.selected_number = None
+        self.state = 'main'  # main, manual, contacts
+
     def show(self):
         """Display menu to select a recipient number."""
-        print_panel("Select recipient:", style='highlight')
-        recipient_choice = prompt_choice(
-            "Choose an option:\n1. Enter phone number manually\n2. Select from recent contacts",
-            choices=["1", "2"],
-            default="1"
+        self.state = 'main'
+        options = {
+            "1": "Enter phone number manually",
+            "2": "Select from recent contacts"
+        }
+        
+        self.display(
+            title="Select Recipient",
+            emoji="📱",
+            options=options
         )
         
-        if recipient_choice == "1":
-            return prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
-        
-        # Get from recent contacts
-        recent_contacts = get_recent_contacts()
-        if not recent_contacts:
-            print_warning("No recent contacts found.")
-            return prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
-        
-        print_panel("Select from recent contacts:", style='highlight')
-        self._display_recent_contacts(recent_contacts)
-        
-        contact_max = len(recent_contacts)
-        contact_selection = prompt_choice(
-            "\nSelect a contact (0 to enter manually)",
-            choices=[str(i) for i in range(contact_max + 1)]
+        return self.selected_number
+
+    def handle_choice(self, choice):
+        """Handle the user's menu selection."""
+        if self.state == 'main':
+            if choice == "1":
+                self.state = 'manual'
+                self.handle_manual_entry()
+            elif choice == "2":
+                self.state = 'contacts'
+                self.handle_contacts_selection()
+        elif self.state == 'contacts':
+            try:
+                idx = int(choice) - 1
+                self.selected_number = self.recent_contacts[idx]['phoneNumber']
+                self.print_success(f"Selected number: {self.selected_number}")
+                self.pause_and_return()
+            except (ValueError, IndexError):
+                self.print_error("Invalid selection")
+                self.pause_and_return()
+
+    def handle_manual_entry(self):
+        """Handle manual phone number entry."""
+        number = prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
+        if number:
+            self.selected_number = number
+            self.print_success(f"Entered number: {self.selected_number}")
+        else:
+            self.print_warning("No number entered")
+        self.pause_and_return()
+
+    def handle_contacts_selection(self):
+        """Handle selection from recent contacts."""
+        self.recent_contacts = get_recent_contacts()
+        if not self.recent_contacts:
+            self.print_warning("No recent contacts found.")
+            self.handle_manual_entry()
+            return
+
+        options = {}
+        for idx, contact in enumerate(self.recent_contacts, 1):
+            options[str(idx)] = f"{contact['phoneNumber']} (Last: {contact.get('lastContact', 'N/A')})"
+
+        self.display(
+            title="Select from Recent Contacts",
+            emoji="📞",
+            options=options
         )
-        
-        if contact_selection == "0":
-            return prompt_choice("Enter recipient phone number (e.g., +14155559876)", choices=None)
-        
-        return recent_contacts[int(contact_selection) - 1]['phoneNumber']
 
     def _display_recent_contacts(self, contacts):
         """Display a table of recent contacts."""

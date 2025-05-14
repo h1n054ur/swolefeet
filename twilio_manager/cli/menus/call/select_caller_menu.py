@@ -10,31 +10,40 @@ from twilio_manager.shared.ui.styling import (
 from twilio_manager.core.phone_numbers import get_active_numbers
 
 class SelectCallerMenu(BaseMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.active_numbers = None
+        self.selected_number = None
+
     def show(self):
         """Display menu to select a caller number."""
         # Get active numbers with voice capability
-        active_numbers = [n for n in get_active_numbers() if n.get('capabilities', {}).get('voice', False)]
+        self.active_numbers = [n for n in get_active_numbers() if n.get('capabilities', {}).get('voice', False)]
         
-        if not active_numbers:
-            print_warning("No voice-enabled numbers found in your account.")
-            prompt_choice("\nPress Enter to return", choices=[""], default="")
+        if not self.active_numbers:
+            self.print_warning("No voice-enabled numbers found in your account.")
+            self.pause_and_return()
             return None
 
-        # Select sender number
-        print_panel("Select a number to call from:", style='highlight')
-        self._display_phone_numbers(active_numbers)
+        options = {}
+        for idx, number in enumerate(self.active_numbers, 1):
+            options[str(idx)] = f"{number['phoneNumber']} ({number.get('friendlyName', 'N/A')})"
 
-        max_index = len(active_numbers)
-        selection = prompt_choice(
-            "\nSelect a number (0 to cancel)",
-            choices=[str(i) for i in range(max_index + 1)]
+        self.display(
+            title="Select Caller Number",
+            emoji="📞",
+            options=options
         )
+        
+        return self.selected_number
 
-        if selection == "0":
-            print_warning("Call cancelled.")
-            return None
-
-        return active_numbers[int(selection) - 1]['phoneNumber']
+    def handle_choice(self, choice):
+        """Handle the user's menu selection."""
+        try:
+            idx = int(choice) - 1
+            self.selected_number = self.active_numbers[idx]['phoneNumber']
+            self.print_success(f"Selected number: {self.selected_number}")
+            self.pause_and_return()
 
     def _display_phone_numbers(self, numbers):
         """Display a table of available phone numbers."""
