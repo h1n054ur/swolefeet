@@ -149,3 +149,75 @@ COUNTRY_DATA = {
         }
     }
 }
+
+def get_area_codes(country: str) -> list[int]:
+    """Get all area codes for a given country.
+    
+    Args:
+        country: ISO country code (e.g., 'US', 'CA')
+        
+    Returns:
+        List of area codes for the country.
+        
+    Raises:
+        KeyError: If country code is not found.
+    """
+    if country not in COUNTRY_DATA:
+        raise KeyError(f"Country code '{country}' not found")
+        
+    area_codes = set()  # Use set to avoid duplicates
+    for region in COUNTRY_DATA[country]['regions'].values():
+        area_codes.update(region['area_codes'])
+    
+    return sorted(list(area_codes))  # Convert to sorted list
+
+def get_country_name(country: str) -> str:
+    """Get the full name of a country from its ISO code.
+    
+    Args:
+        country: ISO country code (e.g., 'US', 'CA')
+        
+    Returns:
+        Full country name.
+        
+    Raises:
+        KeyError: If country code is not found.
+    """
+    if country not in COUNTRY_DATA:
+        raise KeyError(f"Country code '{country}' not found")
+    
+    return COUNTRY_DATA[country]['name']
+
+def get_number_types(country: str) -> dict[str, float]:
+    """Get available number types and their prices for a country.
+    
+    Args:
+        country: ISO country code (e.g., 'US', 'CA')
+        
+    Returns:
+        Dictionary mapping number types to their prices.
+        
+    Raises:
+        KeyError: If country code is not found.
+    """
+    if country not in COUNTRY_DATA:
+        raise KeyError(f"Country code '{country}' not found")
+    
+    return COUNTRY_DATA[country]['number_types'].copy()
+
+def get_regions(country: str) -> dict[str, dict]:
+    """Get regions and their details for a country.
+    
+    Args:
+        country: ISO country code (e.g., 'US', 'CA')
+        
+    Returns:
+        Dictionary mapping region names to their details.
+        
+    Raises:
+        KeyError: If country code is not found.
+    """
+    if country not in COUNTRY_DATA:
+        raise KeyError(f"Country code '{country}' not found")
+    
+    return COUNTRY_DATA[country]['regions'].copy()
