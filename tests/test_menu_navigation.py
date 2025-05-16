@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import patch
 from app.interfaces.menus.main_menu import MainMenu
-from app.interfaces.menus.purchase_menu import PurchaseMenu
-from app.interfaces.menus.manage_menu import ManageMenu
-from app.interfaces.menus.settings_menu import SettingsMenu
+from app.interfaces.menus.purchase.purchase_menu import PurchaseMenu
+from app.interfaces.menus.manage.manage_menu import ManageMenu
+from app.interfaces.menus.settings.settings_menu import SettingsMenu
 
 def test_main_menu_creation():
     """Test main menu can be created."""

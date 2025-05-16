@@ -26,21 +26,21 @@ class MainMenu(BaseMenu):
     
     def purchase_numbers(self) -> bool:
         """Purchase new phone numbers."""
-        from .purchase_menu import PurchaseMenu
+        from .purchase.purchase_menu import PurchaseMenu
         menu = PurchaseMenu(parent=self)
         menu.show()
         return True
     
     def manage_numbers(self) -> bool:
         """Manage existing phone numbers."""
-        from .manage_menu import ManageMenu
+        from .manage.manage_menu import ManageMenu
         menu = ManageMenu(parent=self)
         menu.show()
         return True
     
     def settings(self) -> bool:
         """Settings and administration."""
-        from .settings_menu import SettingsMenu
+        from .settings.settings_menu import SettingsMenu
         menu = SettingsMenu(parent=self)
         menu.show()
         return True
